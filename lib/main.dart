@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:forui/forui.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'firebase_options.dart';
@@ -561,14 +560,12 @@ class _MyAppState extends State<MyApp> {
               appBarTheme: AppBarTheme(
                 centerTitle: true,
                 elevation: 0,
-                titleTextStyle: GoogleFonts.ibmPlexSans(
-                  textStyle: const TextStyle(
+                titleTextStyle: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     decoration: TextDecoration.none,
                   ),
                 ),
-              ),
             );
 
         return FutureBuilder(
