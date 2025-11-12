@@ -6,6 +6,7 @@ import '../models/case.dart';
 import '../models/session.dart';
 import '../models/message.dart';
 import '../config/app_config.dart';
+import '../utils/app_logger.dart';
 // message.dart defines private helpers we can't import; replicate minimal parsing here.
 
 /// Helper function to extract error message from API response
@@ -161,15 +162,16 @@ class RemotePatientService {
     this._refreshCallback,
   ]);
 
-  Map<String, String> _headers() => {
-    'Authorization': 'Bearer ${_tokenProvider()}',
-  };
+  Map<String, String> _headers() {
+    final token = _tokenProvider();
+    return {'Authorization': 'Bearer $token'};
+  }
 
   Future<List<Patient>> list() async {
     final r = await _sendWithRetry(
       () => _client.get(
         Uri.parse('${RemoteApiConfig.baseUrl}/patient/'),
-        headers: _headers(),
+        headers: _headers(), // Called fresh each time the lambda executes
       ),
     );
     final data = jsonDecode(r.body) as Map<String, dynamic>;
@@ -261,9 +263,20 @@ class RemotePatientService {
     http.Response r = await send();
     // Check if token expired - retry with refresh if callback available
     if (_isExpired(r) && _refreshCallback != null) {
+      AppLogger.debug(
+        'PatientService: Token expired (${r.statusCode}), attempting refresh...',
+      );
       final ok = await _refreshCallback();
       if (ok) {
+        AppLogger.debug(
+          'PatientService: Token refresh successful, retrying request...',
+        );
         r = await send();
+        AppLogger.debug(
+          'PatientService: Retry response status: ${r.statusCode}',
+        );
+      } else {
+        AppLogger.debug('PatientService: Token refresh failed');
       }
     }
     // Now check the final response
@@ -545,28 +558,29 @@ class RemoteChatService {
       final conversation = conv[convIndex] as Map<String, dynamic>;
       final sessionIdFromConv =
           conversation['session_id']?.toString() ?? sessionId;
+      final msgIdFromConv = conversation['message_id']?.toString();
       final dynamic content = conversation['content'];
       final safety = conversation['safety'];
+      final timestampRaw =
+          conversation['timestamp'] ??
+          conversation['time_created'] ??
+          conversation['ts'];
+
       // Flattened format already: {session_id, message_id, role, content, safety}
       if (content is String) {
-        final role =
-            conversation['role']?.toString().toLowerCase() ?? 'assistant';
-        final chatRole = (role == 'user' || role == 'human')
-            ? ChatRole.user
-            : ChatRole.ai;
+        // Use fromHistoryJson to properly parse all fields including likes/feedback
         messages.add(
-          ChatMessage(
-            id:
-                conversation['message_id']?.toString() ??
-                'msg_${DateTime.now().microsecondsSinceEpoch}',
-            sessionId: sessionIdFromConv,
-            role: chatRole,
-            content: content.trim(),
-            timestamp: DateTime.now(),
-            safetyScore: _parseSafetyScore(safety),
-            safetyJustification: _parseSafetyJustification(safety),
-            safetyLevel: _parseSafetyLevel(safety),
-          ),
+          ChatMessage.fromHistoryJson({
+            'message_id': msgIdFromConv,
+            'session_id': sessionIdFromConv,
+            'role': conversation['role'],
+            'content': content,
+            'timestamp': timestampRaw,
+            'safety': safety,
+            'like': conversation['like'],
+            'feedback': conversation['feedback'],
+            'stars': conversation['stars'],
+          }),
         );
         continue;
       }
@@ -577,6 +591,8 @@ class RemoteChatService {
           final msgData = contentArray[msgIndex] as Map<String, dynamic>;
           final role = msgData['role']?.toString().toLowerCase() ?? 'assistant';
           final dynamic rawContent = msgData['content'];
+          final msgId = msgData['message_id']?.toString() ?? msgIdFromConv;
+          final ts = msgData['timestamp'] ?? timestampRaw;
           String finalContent = '';
           if (rawContent is String) {
             finalContent = rawContent;
@@ -603,24 +619,26 @@ class RemoteChatService {
           } else {
             finalContent = rawContent?.toString() ?? '';
           }
-          final chatRole = (role == 'user' || role == 'human')
-              ? ChatRole.user
-              : ChatRole.ai;
+          // Use fromHistoryJson to properly parse all fields including likes/feedback
           messages.add(
-            ChatMessage(
-              id: 'msg_${convIndex}_${msgIndex}_${DateTime.now().millisecondsSinceEpoch}',
-              sessionId: sessionIdFromConv,
-              role: chatRole,
-              content: finalContent.trim(),
-              timestamp: DateTime.now(),
-              safetyScore: _parseSafetyScore(safety),
-              safetyJustification: _parseSafetyJustification(safety),
-              safetyLevel: _parseSafetyLevel(safety),
-            ),
+            ChatMessage.fromHistoryJson({
+              'message_id': msgId,
+              'session_id': sessionIdFromConv,
+              'role': role,
+              'content': finalContent,
+              'timestamp': ts,
+              'safety': safety,
+              'like': msgData['like'] ?? conversation['like'],
+              'feedback': msgData['feedback'] ?? conversation['feedback'],
+              'stars': msgData['stars'] ?? conversation['stars'],
+            }),
           );
         }
       }
     }
+
+    // Sort messages by timestamp to ensure chronological order (oldest first)
+    messages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
     return messages;
   }
@@ -651,14 +669,85 @@ class RemoteChatService {
       () => _client.post(uri, headers: _headers()),
     );
     final data = jsonDecode(r.body) as Map<String, dynamic>;
-    final responseText = data['response']?.toString() ?? '';
-    final safety = data['safety_score'];
+
+    // Extract response text - it might be in 'response' field or nested in 'content'
+    String responseText = '';
+    if (data['response'] != null) {
+      responseText = data['response'].toString();
+    } else if (data['content'] is List) {
+      // Extract assistant response from content array (like predict endpoint)
+      final contentList = data['content'] as List;
+      for (final item in contentList) {
+        if (item is Map<String, dynamic> &&
+            item['role']?.toString().toLowerCase() == 'assistant') {
+          final content = item['content'];
+          if (content is String) {
+            responseText = content;
+          } else if (content is List) {
+            // Handle nested content format like [{"type": "text", "text": "..."}]
+            final textParts = <String>[];
+            for (final contentItem in content) {
+              if (contentItem is Map<String, dynamic>) {
+                if (contentItem['type'] == 'text') {
+                  textParts.add(contentItem['text']?.toString() ?? '');
+                } else {
+                  textParts.add(
+                    contentItem['text']?.toString() ??
+                        contentItem['content']?.toString() ??
+                        '',
+                  );
+                }
+              } else {
+                textParts.add(contentItem?.toString() ?? '');
+              }
+            }
+            responseText = textParts
+                .where((s) => s.trim().isNotEmpty)
+                .join('\n\n');
+          }
+          break; // Found assistant response, stop looking
+        }
+      }
+    }
+
+    final safety = data['safety']; // Fixed: use 'safety' not 'safety_score'
     return RemoteChatResponse(
       response: responseText,
       safetyScore: _parseSafetyScore(safety),
       safetyJustification: _parseSafetyJustification(safety),
       safetyLevel: _parseSafetyLevel(safety),
     );
+  }
+
+  /// Like or unlike an AI message
+  /// [messageId] - The ID of the message to like/unlike
+  /// [like] - 'like' to like the message, 'unlike' to unlike/remove like
+  Future<void> likeMessage(String messageId, String like) async {
+    final uri = Uri.parse(
+      '${RemoteApiConfig.baseUrl}/chat/like-message/$messageId',
+    ).replace(queryParameters: {'like': like});
+
+    await _sendWithRetry(() => _client.post(uri, headers: _headers()));
+  }
+
+  /// Submit or edit feedback for an AI message
+  /// [messageId] - The ID of the message to provide feedback for
+  /// [feedback] - Optional text feedback
+  /// [stars] - Optional star rating from 1 to 5
+  Future<void> editFeedback(
+    String messageId, {
+    String? feedback,
+    int? stars,
+  }) async {
+    final Map<String, String> queryParams = {};
+    if (feedback != null) queryParams['feedback'] = feedback;
+    if (stars != null) queryParams['stars'] = stars.toString();
+
+    final uri = Uri.parse(
+      '${RemoteApiConfig.baseUrl}/chat/edit-feedback/$messageId',
+    ).replace(queryParameters: queryParams);
+
+    await _sendWithRetry(() => _client.put(uri, headers: _headers()));
   }
 
   Future<http.Response> _sendWithRetry(

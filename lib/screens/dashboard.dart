@@ -1,4 +1,5 @@
 import 'package:MediChat/widgets/styled_icon_button.dart';
+import 'package:MediChat/widgets/ui/ui_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +11,7 @@ import '../components/edit_patient.dart';
 import '../widgets/profile_tab_content.dart';
 import '../utils/token_expiration_handler.dart';
 import '../widgets/app_loading_widget.dart';
+import '../utils/app_logger.dart';
 import 'settings.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -55,7 +57,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           patientProvider.refresh();
         } catch (e) {
           // Silently handle errors to avoid token expiration popups on dashboard load
-          debugPrint('Failed to refresh patients: $e');
+          AppLogger.error('Failed to refresh patients: $e');
         }
       }
     });
@@ -171,10 +173,16 @@ class _DashboardScreenState extends State<DashboardScreen>
     dynamic patient,
     PatientProvider patientProvider,
   ) async {
+    final maxHeight = MediaQuery.of(context).size.height * 0.7;
     final result = await showFDialog<dynamic>(
       context: context,
-      builder: (ctx, style, animation) =>
-          EditPatientDialog(patient: patient, patientProvider: patientProvider),
+      builder: (ctx, style, animation) => ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxHeight),
+        child: EditPatientDialog(
+          patient: patient,
+          patientProvider: patientProvider,
+        ),
+      ),
     );
 
     // Handle the result
@@ -196,56 +204,60 @@ class _DashboardScreenState extends State<DashboardScreen>
             } catch (e) {
               // Keep an extra dialog fallback for safety
               if (context.mounted) {
+                final maxHeight = MediaQuery.of(context).size.height * 0.7;
                 showFDialog(
                   context: context,
                   builder: (ctx, style, animation) {
                     final ftheme = FTheme.of(ctx);
-                    return FDialog(
-                      style: style,
-                      animation: animation,
-                      direction: Axis.horizontal,
-                      title: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: ftheme.colors.primary.withValues(
-                                alpha: 0.1,
+                    return ConstrainedBox(
+                      constraints: BoxConstraints(maxHeight: maxHeight),
+                      child: FDialog(
+                        style: style.call,
+                        animation: animation,
+                        direction: Axis.horizontal,
+                        title: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: ftheme.colors.primary.withValues(
+                                  alpha: 0.1,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              FIcons.check,
-                              color: ftheme.colors.primary,
-                              size: 24,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'Success',
-                              style: ftheme.typography.lg.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: ftheme.colors.foreground,
+                              child: Icon(
+                                FIcons.check,
+                                color: ftheme.colors.primary,
+                                size: 24,
                               ),
                             ),
-                          ),
-                          FButton.icon(
-                            style: FButtonStyle.ghost(),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Success',
+                                style: ftheme.typography.lg.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: ftheme.colors.foreground,
+                                ),
+                              ),
+                            ),
+                            FButton.icon(
+                              style: FButtonStyle.ghost(),
+                              onPress: () => Navigator.of(ctx).pop(),
+                              child: const Icon(FIcons.x),
+                            ),
+                          ],
+                        ),
+                        body: const Text(
+                          'Patient information updated successfully!',
+                        ),
+                        actions: [
+                          FButton(
                             onPress: () => Navigator.of(ctx).pop(),
-                            child: const Icon(FIcons.x),
+                            child: const Text('OK'),
                           ),
                         ],
                       ),
-                      body: const Text(
-                        'Patient information updated successfully!',
-                      ),
-                      actions: [
-                        FButton(
-                          onPress: () => Navigator.of(ctx).pop(),
-                          child: const Text('OK'),
-                        ),
-                      ],
                     );
                   },
                 );
@@ -269,54 +281,58 @@ class _DashboardScreenState extends State<DashboardScreen>
               );
             } catch (e) {
               if (context.mounted) {
+                final maxHeight = MediaQuery.of(context).size.height * 0.7;
                 showFDialog(
                   context: context,
                   builder: (ctx, style, animation) {
                     final ftheme = FTheme.of(ctx);
-                    return FDialog(
-                      style: style,
-                      animation: animation,
-                      direction: Axis.horizontal,
-                      title: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: ftheme.colors.destructive.withValues(
-                                alpha: 0.1,
+                    return ConstrainedBox(
+                      constraints: BoxConstraints(maxHeight: maxHeight),
+                      child: FDialog(
+                        style: style.call,
+                        animation: animation,
+                        direction: Axis.horizontal,
+                        title: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: ftheme.colors.destructive.withValues(
+                                  alpha: 0.1,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              FIcons.triangleAlert,
-                              color: ftheme.colors.destructive,
-                              size: 24,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'Error',
-                              style: ftheme.typography.lg.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: ftheme.colors.foreground,
+                              child: Icon(
+                                FIcons.triangleAlert,
+                                color: ftheme.colors.destructive,
+                                size: 24,
                               ),
                             ),
-                          ),
-                          FButton.icon(
-                            style: FButtonStyle.ghost(),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Error',
+                                style: ftheme.typography.lg.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: ftheme.colors.foreground,
+                                ),
+                              ),
+                            ),
+                            FButton.icon(
+                              style: FButtonStyle.ghost(),
+                              onPress: () => Navigator.of(ctx).pop(),
+                              child: const Icon(FIcons.x),
+                            ),
+                          ],
+                        ),
+                        body: Text('Failed to update patient: $errorMessage'),
+                        actions: [
+                          FButton(
                             onPress: () => Navigator.of(ctx).pop(),
-                            child: const Icon(FIcons.x),
+                            child: const Text('OK'),
                           ),
                         ],
                       ),
-                      body: Text('Failed to update patient: $errorMessage'),
-                      actions: [
-                        FButton(
-                          onPress: () => Navigator.of(ctx).pop(),
-                          child: const Text('OK'),
-                        ),
-                      ],
                     );
                   },
                 );
@@ -402,12 +418,15 @@ class _DashboardScreenState extends State<DashboardScreen>
                   ),
                 ),
                 const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: () => handleTokenExpiration(() async {
+                AppButton(
+                  label: "Retry",
+                  onPressed: () async {
+                    // Token refresh is already handled by _sendWithRetry in RemotePatientService
                     await patientProvider.refresh();
-                  }),
-                  icon: Icon(FIcons.refreshCw),
-                  label: const Text('Retry'),
+                  },
+                  leading: Icon(FIcons.refreshCw),
+                  padding: EdgeInsets.all(8),
+                  borderRadius: BorderRadius.circular(4),
                 ),
               ],
             ),
@@ -424,9 +443,10 @@ class _DashboardScreenState extends State<DashboardScreen>
               const Text('No patients yet'),
               const SizedBox(height: 8),
               ElevatedButton.icon(
-                onPressed: () => handleTokenExpiration(() async {
+                onPressed: () async {
+                  // Token refresh is already handled by _sendWithRetry in RemotePatientService
                   await patientProvider.refresh();
-                }),
+                },
                 icon: Icon(FIcons.refreshCw),
                 label: const Text('Refresh'),
               ),

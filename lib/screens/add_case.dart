@@ -27,7 +27,7 @@ class _AddCaseScreenState extends State<AddCaseScreen>
 
   String? _selectedPriority;
   bool _isLoading = false;
-  List<String> _tags = [];
+  final List<String> _tags = [];
 
   @override
   void dispose() {

@@ -4,6 +4,7 @@ import '../models/patient.dart';
 import '../services/api_service.dart';
 import '../services/remote_api_service.dart';
 import '../config/app_config.dart';
+import '../utils/app_logger.dart';
 
 class PatientProvider with ChangeNotifier {
   final PatientApiService _api; // mock
@@ -38,17 +39,21 @@ class PatientProvider with ChangeNotifier {
     try {
       if (useRemote && _remote != null) {
         if (AppConfig.enableDebugLogging) {
-          print('PatientProvider: Using remote API to fetch patients');
+          AppLogger.debug(
+            'PatientProvider: Using remote API to fetch patients',
+          );
         }
         _patients = await _remote!.list();
       } else {
         if (AppConfig.enableDebugLogging) {
-          print('PatientProvider: Using local mock API to fetch patients');
+          AppLogger.debug(
+            'PatientProvider: Using local mock API to fetch patients',
+          );
         }
         _patients = await _api.listPatients();
       }
       if (AppConfig.enableDebugLogging) {
-        print(
+        AppLogger.debug(
           'PatientProvider: Successfully fetched ${_patients.length} patients',
         );
         // Only show toast after initial load to avoid scaffold messenger issues
@@ -59,17 +64,12 @@ class PatientProvider with ChangeNotifier {
       _error = null;
     } catch (e) {
       if (AppConfig.enableDebugLogging) {
-        print('PatientProvider: Error fetching patients: $e');
+        AppLogger.error('PatientProvider: Error fetching patients: $e');
       }
+
       // Only show error toast if this isn't during initial app startup
       if (_patients.isNotEmpty || _error != null) {
         ToastService.showError('Failed to fetch patients: ${e.toString()}');
-      }
-      // Re-throw token expiration exceptions so they can be handled by UI
-      if (e is TokenExpiredException) {
-        _loading = false;
-        notifyListeners();
-        rethrow;
       }
       _error = e.toString();
     } finally {

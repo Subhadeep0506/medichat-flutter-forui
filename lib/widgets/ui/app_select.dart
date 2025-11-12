@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:forui/forui.dart';
 
-/// AppSelect: lightweight reusable wrapper around Forui's FSelect.
-///
-/// Supports passing items as a Map<label, value> or as a List<String>.
 class AppSelect extends StatelessWidget {
   final Map<String, String>? itemsMap;
   final List<String>? itemsList;

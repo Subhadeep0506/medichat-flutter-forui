@@ -438,97 +438,101 @@ class _SettingsContentState extends State<SettingsContent> {
       context: context,
       builder: (ctx, style, animation) {
         final ftheme = FTheme.of(ctx);
-        return FDialog(
-          style: style,
-          animation: animation,
-          direction: Axis.horizontal,
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: ftheme.colors.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
+        final maxHeight = MediaQuery.of(context).size.height * 0.7;
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: FDialog(
+            style: style.call,
+            animation: animation,
+            direction: Axis.horizontal,
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: ftheme.colors.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(FIcons.listFilter, color: ftheme.colors.primary),
                 ),
-                child: Icon(FIcons.listFilter, color: ftheme.colors.primary),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Choose Color',
-                  style: ftheme.typography.lg.copyWith(
-                    color: ftheme.colors.foreground,
-                    fontWeight: FontWeight.bold,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Choose Color',
+                    style: ftheme.typography.lg.copyWith(
+                      color: ftheme.colors.foreground,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
+                FButton.icon(
+                  style: FButtonStyle.ghost(),
+                  onPress: () => Navigator.of(ctx).pop(),
+                  child: const Icon(FIcons.x),
+                ),
+              ],
+            ),
+            body: SizedBox(
+              width: 300,
+              child: GridView.builder(
+                shrinkWrap: true,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 4,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                  childAspectRatio: 1,
+                ),
+                itemCount: predefinedColors.length,
+                itemBuilder: (context, index) {
+                  final color = predefinedColors[index];
+                  final isSelected = color.value == provider.customColorValue;
+
+                  return FButton(
+                    style: FButtonStyle.ghost(),
+                    onPress: () {
+                      provider.updateCustomColor(color.value);
+                      Navigator.of(ctx).pop();
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isSelected
+                              ? ftheme.colors.primaryForeground
+                              : ftheme.colors.border.withValues(alpha: 0.22),
+                          width: isSelected ? 3 : 1,
+                        ),
+                        boxShadow: [
+                          if (isSelected)
+                            BoxShadow(
+                              color: color.withValues(alpha: 0.28),
+                              blurRadius: 6,
+                              offset: const Offset(0, 1),
+                            ),
+                        ],
+                      ),
+                      child: isSelected
+                          ? Icon(
+                              FIcons.check,
+                              color: ftheme.colors.primaryForeground,
+                            )
+                          : null,
+                    ),
+                  );
+                },
               ),
-              FButton.icon(
-                style: FButtonStyle.ghost(),
+            ),
+            actions: [
+              FButton(
+                style: FButtonStyle.outline(),
                 onPress: () => Navigator.of(ctx).pop(),
-                child: const Icon(FIcons.x),
+                child: const Text('Cancel'),
               ),
             ],
           ),
-          body: SizedBox(
-            width: 300,
-            child: GridView.builder(
-              shrinkWrap: true,
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
-                childAspectRatio: 1,
-              ),
-              itemCount: predefinedColors.length,
-              itemBuilder: (context, index) {
-                final color = predefinedColors[index];
-                final isSelected = color.value == provider.customColorValue;
-
-                return FButton(
-                  style: FButtonStyle.ghost(),
-                  onPress: () {
-                    provider.updateCustomColor(color.value);
-                    Navigator.of(ctx).pop();
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: color,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: isSelected
-                            ? ftheme.colors.primaryForeground
-                            : ftheme.colors.border.withValues(alpha: 0.22),
-                        width: isSelected ? 3 : 1,
-                      ),
-                      boxShadow: [
-                        if (isSelected)
-                          BoxShadow(
-                            color: color.withValues(alpha: 0.28),
-                            blurRadius: 6,
-                            offset: const Offset(0, 1),
-                          ),
-                      ],
-                    ),
-                    child: isSelected
-                        ? Icon(
-                            FIcons.check,
-                            color: ftheme.colors.primaryForeground,
-                          )
-                        : null,
-                  ),
-                );
-              },
-            ),
-          ),
-          actions: [
-            FButton(
-              style: FButtonStyle.outline(),
-              onPress: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel'),
-            ),
-          ],
         );
       },
     );
@@ -539,92 +543,96 @@ class _SettingsContentState extends State<SettingsContent> {
       context: context,
       builder: (ctx, style, animation) {
         final ftheme = FTheme.of(ctx);
-        return FDialog(
-          style: style,
-          animation: animation,
-          direction: Axis.horizontal,
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: ftheme.colors.destructive.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  FIcons.shieldAlert,
-                  color: ftheme.colors.destructive,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Reset All Settings',
-                  style: ftheme.typography.lg.copyWith(
-                    color: ftheme.colors.foreground,
-                    fontWeight: FontWeight.bold,
+        final maxHeight = MediaQuery.of(context).size.height * 0.7;
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: FDialog(
+            style: style.call,
+            animation: animation,
+            direction: Axis.horizontal,
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: ftheme.colors.destructive.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    FIcons.shieldAlert,
+                    color: ftheme.colors.destructive,
                   ),
                 ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Reset All Settings',
+                    style: ftheme.typography.lg.copyWith(
+                      color: ftheme.colors.foreground,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                FButton.icon(
+                  style: FButtonStyle.ghost(),
+                  onPress: () => Navigator.of(ctx).pop(),
+                  child: const Icon(FIcons.x),
+                ),
+              ],
+            ),
+            body: Text(
+              'Are you sure you want to reset all settings to their default values? This action cannot be undone.',
+              style: ftheme.typography.base.copyWith(
+                color: ftheme.colors.foreground,
               ),
-              FButton.icon(
-                style: FButtonStyle.ghost(),
+            ),
+            actions: [
+              FButton(
+                style: FButtonStyle.outline(),
                 onPress: () => Navigator.of(ctx).pop(),
-                child: const Icon(FIcons.x),
+                child: const Text('Cancel'),
+              ),
+              FButton(
+                style: FButtonStyle.destructive(),
+                onPress: () {
+                  // Reset theme to light
+                  context.read<ThemeProvider>().setThemeMode(ThemeMode.light);
+
+                  // Reset loading animation settings
+                  context.read<LoadingAnimationProvider>().resetToDefaults();
+
+                  Navigator.of(ctx).pop();
+
+                  // Show success feedback using ForUI themed snackbar
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Row(
+                        children: [
+                          Icon(
+                            FIcons.check,
+                            color: ftheme.colors.primaryForeground,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'All settings have been reset to defaults',
+                            style: ftheme.typography.sm.copyWith(
+                              color: ftheme.colors.primaryForeground,
+                            ),
+                          ),
+                        ],
+                      ),
+                      backgroundColor: ftheme.colors.primary,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  );
+                },
+                child: const Text('Reset All'),
               ),
             ],
           ),
-          body: Text(
-            'Are you sure you want to reset all settings to their default values? This action cannot be undone.',
-            style: ftheme.typography.base.copyWith(
-              color: ftheme.colors.foreground,
-            ),
-          ),
-          actions: [
-            FButton(
-              style: FButtonStyle.outline(),
-              onPress: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel'),
-            ),
-            FButton(
-              style: FButtonStyle.destructive(),
-              onPress: () {
-                // Reset theme to light
-                context.read<ThemeProvider>().setThemeMode(ThemeMode.light);
-
-                // Reset loading animation settings
-                context.read<LoadingAnimationProvider>().resetToDefaults();
-
-                Navigator.of(ctx).pop();
-
-                // Show success feedback using ForUI themed snackbar
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Row(
-                      children: [
-                        Icon(
-                          FIcons.check,
-                          color: ftheme.colors.primaryForeground,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'All settings have been reset to defaults',
-                          style: ftheme.typography.sm.copyWith(
-                            color: ftheme.colors.primaryForeground,
-                          ),
-                        ),
-                      ],
-                    ),
-                    backgroundColor: ftheme.colors.primary,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                );
-              },
-              child: const Text('Reset All'),
-            ),
-          ],
         );
       },
     );

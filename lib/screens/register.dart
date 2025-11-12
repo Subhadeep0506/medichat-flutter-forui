@@ -31,7 +31,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   bool _loadedDraft = false;
   bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
+  final bool _obscureConfirmPassword = true;
   bool _isRegistering = false;
 
   @override

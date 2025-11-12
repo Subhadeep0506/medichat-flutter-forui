@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
 import '../config/app_config.dart';
 import '../utils/platform_helper.dart';
+import '../utils/app_logger.dart';
 
 /// Enhanced HTTP client with mobile-optimized configurations
 class HttpClientService {
@@ -18,7 +19,7 @@ class HttpClientService {
     if (AppConfig.isWeb) {
       // For web, use the default browser client
       if (AppConfig.enableDebugLogging) {
-        print('HttpClientService: Creating web client');
+        AppLogger.debug('HttpClientService: Creating web client');
       }
       return http.Client();
     }
@@ -36,7 +37,7 @@ class HttpClientService {
       if (AppConfig.enableDebugLogging) {
         httpClient.badCertificateCallback = (cert, host, port) {
           // Log the certificate issue
-          print('SSL Certificate warning for $host:$port');
+          AppLogger.warning('SSL Certificate warning for $host:$port');
           // In production, you should validate the certificate properly
           return false; // Change to true only for development with self-signed certs
         };
@@ -46,14 +47,18 @@ class HttpClientService {
       httpClient.userAgent = _getUserAgent();
 
       if (AppConfig.enableDebugLogging) {
-        print('HttpClientService: Creating IOClient for mobile/desktop');
+        AppLogger.debug(
+          'HttpClientService: Creating IOClient for mobile/desktop',
+        );
       }
 
       return IOClient(httpClient);
     } catch (e) {
       // Fallback to basic client if IOClient creation fails
       if (AppConfig.enableDebugLogging) {
-        print('HttpClientService: Falling back to basic client due to: $e');
+        AppLogger.error(
+          'HttpClientService: Falling back to basic client due to: $e',
+        );
       }
       return http.Client();
     }
@@ -109,9 +114,11 @@ class HttpClientService {
 
         // Log response in debug mode
         if (AppConfig.enableDebugLogging) {
-          print('HTTP $method ${uri.toString()} -> ${response.statusCode}');
+          AppLogger.debug(
+            'HTTP $method ${uri.toString()} -> ${response.statusCode}',
+          );
           if (response.statusCode >= 400) {
-            print('Response body: ${response.body}');
+            AppLogger.debug('Response body: ${response.body}');
           }
         }
 
@@ -120,7 +127,7 @@ class HttpClientService {
         lastException = e is Exception ? e : Exception(e.toString());
 
         if (AppConfig.enableDebugLogging) {
-          print('HTTP request failed (attempt ${attempt + 1}): $e');
+          AppLogger.debug('HTTP request failed (attempt ${attempt + 1}): $e');
         }
 
         // Don't retry on certain errors

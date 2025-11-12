@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../utils/app_logger.dart';
 
 /// Global service for handling token expiration across the entire app
 /// This service automatically refreshes tokens when they expire without showing popups
@@ -45,7 +46,9 @@ class GlobalTokenExpirationService {
           );
           return provider.isAuthenticated;
         } catch (e) {
-          debugPrint('Error getting auth provider during refresh check: $e');
+          AppLogger.error(
+            'Error getting auth provider during refresh check: $e',
+          );
         }
       }
       return false;
@@ -66,29 +69,29 @@ class GlobalTokenExpirationService {
       }
 
       if (provider == null) {
-        debugPrint('No auth provider available for token refresh');
+        AppLogger.debug('No auth provider available for token refresh');
         return false;
       }
 
       // Attempt to refresh the token automatically
-      debugPrint('Token expired, attempting automatic refresh...');
+      AppLogger.debug('Token expired, attempting automatic refresh...');
       final refreshSuccess = await provider.relogin();
 
       if (refreshSuccess) {
-        debugPrint('Token refresh successful, resuming operations');
+        AppLogger.debug('Token refresh successful, resuming operations');
         // Execute any pending operations
         _executePendingOperations();
         return true;
       } else {
         // Refresh failed, logout and redirect to login
-        debugPrint('Token refresh failed, clearing session');
+        AppLogger.debug('Token refresh failed, clearing session');
         await provider.handleTokenExpiration();
         _redirectToLogin();
         return false;
       }
     } catch (e) {
       // Handle any errors gracefully - don't crash the app
-      debugPrint('Error during automatic token refresh: $e');
+      AppLogger.error('Error during automatic token refresh: $e');
 
       // Fallback: logout and navigate to login
       if (authProvider != null) {
@@ -121,20 +124,20 @@ class GlobalTokenExpirationService {
         try {
           context.go('/login');
         } catch (e) {
-          debugPrint('Navigation error during login redirect: $e');
+          AppLogger.error('Navigation error during login redirect: $e');
           // If go fails, try push replacement
           try {
             context.pushReplacement('/login');
           } catch (e2) {
-            debugPrint('Push replacement also failed: $e2');
+            AppLogger.error('Push replacement also failed: $e2');
             // As last resort, just clear the navigation stack
-            debugPrint(
+            AppLogger.error(
               'All navigation methods failed, unable to redirect to login',
             );
           }
         }
       } else {
-        debugPrint('No navigation context available for login redirect');
+        AppLogger.debug('No navigation context available for login redirect');
       }
     });
   }
@@ -150,7 +153,7 @@ class GlobalTokenExpirationService {
       try {
         operation();
       } catch (e) {
-        debugPrint('Error executing pending operation: $e');
+        AppLogger.error('Error executing pending operation: $e');
       }
     }
     _pendingOperations.clear();
@@ -183,11 +186,11 @@ class GlobalTokenExpirationService {
 
         if (refreshSuccess) {
           // Token refresh successful, retry the original operation
-          debugPrint('Token refreshed successfully, retrying API call...');
+          AppLogger.debug('Token refreshed successfully, retrying API call...');
           return await apiCall();
         } else {
           // Token refresh failed, re-throw the original error
-          debugPrint('Token refresh failed, API call cannot continue');
+          AppLogger.debug('Token refresh failed, API call cannot continue');
           rethrow;
         }
       }

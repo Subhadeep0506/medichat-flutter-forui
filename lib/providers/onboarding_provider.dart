@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/app_logger.dart';
 
 /// Manages whether the user has already seen the onboarding screen.
 class OnboardingProvider with ChangeNotifier {
@@ -20,7 +21,7 @@ class OnboardingProvider with ChangeNotifier {
       _hasSeen = prefs.getBool(_key) ?? false;
     } catch (e) {
       if (kDebugMode) {
-        print('OnboardingProvider init error: $e');
+        AppLogger.error('OnboardingProvider init error: $e');
       }
     }
     _loaded = true;
@@ -35,7 +36,7 @@ class OnboardingProvider with ChangeNotifier {
       await prefs.setBool(_key, true);
     } catch (e) {
       if (kDebugMode) {
-        print('Failed to persist onboarding flag: $e');
+        AppLogger.error('Failed to persist onboarding flag: $e');
       }
     }
     notifyListeners();

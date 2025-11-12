@@ -493,7 +493,7 @@ class PatientCaseDetailsPopover extends StatelessWidget {
   Decoration _panelDecoration(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return BoxDecoration(
-      color: scheme.surfaceVariant.withValues(alpha: 0.25),
+      color: scheme.surfaceContainerHighest.withValues(alpha: 0.25),
       borderRadius: BorderRadius.circular(12),
       border: Border.all(
         color: scheme.outline.withValues(alpha: 0.15),

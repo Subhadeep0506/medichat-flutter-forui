@@ -18,6 +18,7 @@ import '../providers/current_patient_provider.dart';
 import '../providers/current_case_provider.dart';
 import '../widgets/app_loading_widget.dart';
 import '../providers/patient_provider.dart';
+import '../widgets/feedback_dialog.dart';
 import '../providers/case_provider.dart';
 import '../services/toast_service.dart';
 import '../widgets/chat_settings_dialog.dart';
@@ -42,8 +43,9 @@ class _ChatSessionScreenState extends State<ChatSessionScreen>
     with TokenExpirationHandler {
   final _input = TextEditingController();
   final _scroll = ScrollController();
-  bool _init = false;
   bool _sidebarVisible = false; // controls visibility of the sessions sidebar
+  int _previousMessageCount = 0; // Track message count for auto-scroll
+  String? _currentSessionId; // Track current session to detect switches
 
   @override
   void initState() {
@@ -60,12 +62,78 @@ class _ChatSessionScreenState extends State<ChatSessionScreen>
     super.dispose();
   }
 
+  // Helper method to scroll to bottom
+  void _scrollToBottom({bool animated = true, int delayMs = 100}) {
+    if (!mounted) return;
+
+    Future.delayed(Duration(milliseconds: delayMs), () {
+      if (!mounted || !_scroll.hasClients) return;
+
+      if (animated) {
+        _scroll.animateTo(
+          _scroll.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      } else {
+        _scroll.jumpTo(_scroll.position.maxScrollExtent);
+      }
+    });
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_init) {
-      _init = true;
+
+    // Check if session has changed (initial load or session switch)
+    if (_currentSessionId != widget.sessionId) {
+      _currentSessionId = widget.sessionId;
+      _previousMessageCount = 0; // Reset message count for new session
+
       // Use post-frame callback to avoid setState during build
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          handleTokenExpiration(() async {
+            await context.read<ChatProvider>().load(widget.sessionId);
+            await context.read<SessionProvider>().refresh(
+              widget.caseId,
+              patientId: widget.patientId,
+            );
+          });
+
+          // Set current patient and case for the sidebar
+          final patientProvider = context.read<PatientProvider>();
+          final caseProvider = context.read<CaseProvider>();
+          final currentPatientProvider = context.read<CurrentPatientProvider>();
+          final currentCaseProvider = context.read<CurrentCaseProvider>();
+
+          final patient = patientProvider.getPatientById(widget.patientId);
+          if (patient != null) {
+            currentPatientProvider.setCurrentPatient(patient);
+          }
+
+          final medicalCase = caseProvider.getCaseById(
+            widget.caseId,
+            widget.patientId,
+          );
+          if (medicalCase != null) {
+            currentCaseProvider.setCurrentCase(medicalCase);
+          }
+        }
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant ChatSessionScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // Detect session change when widget is updated with new session
+    if (oldWidget.sessionId != widget.sessionId) {
+      _currentSessionId = widget.sessionId;
+      _previousMessageCount = 0; // Reset message count for new session
+
+      // Load messages for the new session
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           handleTokenExpiration(() async {
@@ -117,14 +185,9 @@ class _ChatSessionScreenState extends State<ChatSessionScreen>
       );
     });
     if (!mounted) return;
-    await Future.delayed(const Duration(milliseconds: 40));
-    if (_scroll.hasClients) {
-      _scroll.animateTo(
-        _scroll.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOut,
-      );
-    }
+
+    // Scroll to bottom after sending message
+    _scrollToBottom();
   }
 
   void _showChatSettings() {
@@ -139,8 +202,13 @@ class _ChatSessionScreenState extends State<ChatSessionScreen>
 
     showFDialog(
       context: context,
-      builder: (ctx, style, animation) =>
-          ChatSettingsDialog(provider: provider),
+      builder: (ctx, style, animation) {
+        final maxHeight = MediaQuery.of(context).size.height * 0.7;
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: ChatSettingsDialog(provider: provider),
+        );
+      },
     );
   }
 
@@ -210,6 +278,15 @@ class _ChatSessionScreenState extends State<ChatSessionScreen>
       final sending = chat.isSending(widget.sessionId);
       final messages = chat.messagesFor(widget.sessionId);
       final theme = FTheme.of(context);
+
+      // Auto-scroll when messages change (initial load or new messages)
+      if (messages.length != _previousMessageCount) {
+        _previousMessageCount = messages.length;
+        // Use a small delay to ensure ListView has rendered
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _scrollToBottom(animated: messages.length > 1, delayMs: 100);
+        });
+      }
 
       return FScaffold(
         childPad: false,
@@ -531,7 +608,7 @@ class _MessagesList extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Theme.of(
                         context,
-                      ).colorScheme.surfaceVariant.withValues(alpha: 0.3),
+                      ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: Theme.of(
@@ -610,6 +687,7 @@ class _MessagesList extends StatelessWidget {
           }
           if (answer.isEmpty) answer = content;
           return _AIMessageBubble(
+            key: ValueKey(m.id),
             answer: answer,
             think: think,
             pending: m.pending,
@@ -667,6 +745,7 @@ class _AIMessageBubble extends StatefulWidget {
   final ChatMessage? original;
   final bool isFirst;
   const _AIMessageBubble({
+    super.key,
     required this.answer,
     required this.think,
     required this.pending,
@@ -680,6 +759,30 @@ class _AIMessageBubble extends StatefulWidget {
 
 class _AIMessageBubbleState extends State<_AIMessageBubble> {
   bool _expanded = false;
+
+  void _showFeedbackDialog(BuildContext context, ChatMessage message) {
+    showFDialog(
+      context: context,
+      builder: (ctx, style, animation) {
+        final maxHeight = MediaQuery.of(context).size.height * 0.7;
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: FeedbackDialog(
+            messageId: message.id,
+            initialFeedback: message.feedback,
+            initialStars: message.feedbackStars,
+            onSubmitFeedback: (messageId, {feedback, stars}) async {
+              await context.read<ChatProvider>().submitFeedback(
+                messageId,
+                feedback: feedback,
+                stars: stars,
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -753,6 +856,30 @@ class _AIMessageBubbleState extends State<_AIMessageBubble> {
                             color: Colors.transparent,
                             child: MarkdownBody(data: widget.answer),
                           ),
+                          // Message action buttons (like, dislike, feedback)
+                          if (!widget.pending && widget.original != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: _MessageActionButtons(
+                                key: ValueKey('actions_${widget.original!.id}'),
+                                message: widget.original!,
+                                onLike: (messageId, action) async {
+                                  try {
+                                    await context
+                                        .read<ChatProvider>()
+                                        .likeMessage(messageId, action);
+                                  } catch (e) {
+                                    // Error handling is done in the provider
+                                  }
+                                },
+                                onFeedback: (messageId) {
+                                  _showFeedbackDialog(
+                                    context,
+                                    widget.original!,
+                                  );
+                                },
+                              ),
+                            ),
                         ],
                       ),
               ),
@@ -766,263 +893,289 @@ class _AIMessageBubbleState extends State<_AIMessageBubble> {
                         context: context,
                         builder: (ctx, style, animation) {
                           final theme = Theme.of(context);
+                          final maxHeight =
+                              MediaQuery.of(context).size.height * 0.7;
                           // Unified styling using FDialog similar to PatientCaseDetailsPopover
-                          return FDialog(
-                            style: style,
-                            animation: animation,
-                            direction: Axis.horizontal,
-                            title: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: BoxDecoration(
-                                    color: theme.colorScheme.primary.withValues(
-                                      alpha: 0.12,
+                          return ConstrainedBox(
+                            constraints: BoxConstraints(maxHeight: maxHeight),
+                            child: FDialog(
+                              style: style.call,
+                              animation: animation,
+                              direction: Axis.horizontal,
+                              title: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.primary
+                                          .withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
-                                    borderRadius: BorderRadius.circular(12),
+                                    child: Icon(
+                                      FIcons.shieldAlert,
+                                      color: theme.colorScheme.primary,
+                                      size: 24,
+                                    ),
                                   ),
-                                  child: Icon(
-                                    FIcons.shieldAlert,
-                                    color: theme.colorScheme.primary,
-                                    size: 24,
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Safety Evaluation',
+                                          style: theme.textTheme.headlineSmall
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'AI response safety assessment',
+                                          style: theme.textTheme.bodyMedium
+                                              ?.copyWith(
+                                                color: theme
+                                                    .colorScheme
+                                                    .onSurface
+                                                    .withValues(alpha: 0.7),
+                                              ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
+                                  AppIconButton(
+                                    icon: FIcons.x,
+                                    onPressed: () => Navigator.of(ctx).pop(),
+                                  ),
+                                ],
+                              ),
+                              body: ConstrainedBox(
+                                constraints: const BoxConstraints(),
+                                child: SingleChildScrollView(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    0,
+                                    16,
+                                    0,
+                                    0,
+                                  ),
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        'Safety Evaluation',
-                                        style: theme.textTheme.headlineSmall
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'AI response safety assessment',
-                                        style: theme.textTheme.bodyMedium
-                                            ?.copyWith(
-                                              color: theme.colorScheme.onSurface
-                                                  .withValues(alpha: 0.7),
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                AppIconButton(
-                                  icon: FIcons.x,
-                                  onPressed: () => Navigator.of(ctx).pop(),
-                                ),
-                              ],
-                            ),
-                            body: ConstrainedBox(
-                              constraints: const BoxConstraints(),
-                              child: SingleChildScrollView(
-                                padding: const EdgeInsets.fromLTRB(0, 16, 0, 0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // Safety Score Panel
-                                    Container(
-                                      width: double.infinity,
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: theme.colorScheme.surfaceVariant
-                                            .withValues(alpha: 0.25),
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: theme.colorScheme.outline
-                                              .withValues(alpha: 0.15),
+                                      // Safety Score Panel
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: theme
+                                              .colorScheme
+                                              .surfaceContainerHighest
+                                              .withValues(alpha: 0.25),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          border: Border.all(
+                                            color: theme.colorScheme.outline
+                                                .withValues(alpha: 0.15),
+                                          ),
                                         ),
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Container(
+                                                  padding: const EdgeInsets.all(
+                                                    6,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: badgeColor(),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          8,
+                                                        ),
+                                                  ),
+                                                  child: Icon(
+                                                    FIcons.badgeInfo,
+                                                    color: Theme.of(
+                                                      context,
+                                                    ).colorScheme.onPrimary,
+                                                    size: 16,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 12),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Text(
+                                                        'SAFETY SCORE',
+                                                        style: theme
+                                                            .textTheme
+                                                            .labelSmall
+                                                            ?.copyWith(
+                                                              color: theme
+                                                                  .colorScheme
+                                                                  .primary,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                              letterSpacing:
+                                                                  0.6,
+                                                            ),
+                                                      ),
+                                                      const SizedBox(height: 2),
+                                                      Text(
+                                                        '$safetyScore (${safetyLevel ?? 'N/A'})',
+                                                        style: theme
+                                                            .textTheme
+                                                            .bodyLarge
+                                                            ?.copyWith(
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                            ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            if (safetyJust != null) ...[
+                                              const SizedBox(height: 16),
                                               Container(
                                                 padding: const EdgeInsets.all(
-                                                  6,
+                                                  8,
                                                 ),
                                                 decoration: BoxDecoration(
-                                                  color: badgeColor(),
+                                                  color: theme
+                                                      .colorScheme
+                                                      .surfaceContainerHighest
+                                                      .withValues(alpha: 0.3),
                                                   borderRadius:
                                                       BorderRadius.circular(8),
                                                 ),
-                                                child: Icon(
-                                                  FIcons.badgeInfo,
-                                                  color: Theme.of(
-                                                    context,
-                                                  ).colorScheme.onPrimary,
-                                                  size: 16,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 12),
-                                              Expanded(
                                                 child: Column(
                                                   crossAxisAlignment:
                                                       CrossAxisAlignment.start,
                                                   children: [
                                                     Text(
-                                                      'SAFETY SCORE',
+                                                      'EVALUATION DETAILS',
                                                       style: theme
                                                           .textTheme
                                                           .labelSmall
                                                           ?.copyWith(
-                                                            color: theme
-                                                                .colorScheme
-                                                                .primary,
                                                             fontWeight:
                                                                 FontWeight.w600,
                                                             letterSpacing: 0.6,
                                                           ),
                                                     ),
-                                                    const SizedBox(height: 2),
+                                                    const SizedBox(height: 6),
                                                     Text(
-                                                      '$safetyScore (${safetyLevel ?? 'N/A'})',
+                                                      safetyJust,
                                                       style: theme
                                                           .textTheme
-                                                          .bodyLarge
-                                                          ?.copyWith(
-                                                            fontWeight:
-                                                                FontWeight.w600,
-                                                          ),
+                                                          .bodySmall,
                                                     ),
                                                   ],
                                                 ),
                                               ),
                                             ],
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(height: 20),
+                                      // AI Disclaimer Panel
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.all(16),
+                                        decoration: BoxDecoration(
+                                          color: theme.colorScheme.error
+                                              .withValues(alpha: 0.08),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
                                           ),
-                                          if (safetyJust != null) ...[
-                                            const SizedBox(height: 16),
+                                          border: Border.all(
+                                            color: theme.colorScheme.error
+                                                .withValues(alpha: 0.25),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
                                             Container(
-                                              padding: const EdgeInsets.all(8),
+                                              padding: const EdgeInsets.all(6),
                                               decoration: BoxDecoration(
-                                                color: theme
-                                                    .colorScheme
-                                                    .surfaceVariant
-                                                    .withValues(alpha: 0.3),
+                                                color: theme.colorScheme.error
+                                                    .withValues(alpha: 0.12),
                                                 borderRadius:
                                                     BorderRadius.circular(8),
                                               ),
+                                              child: Icon(
+                                                FIcons.messageCircleWarning,
+                                                color: theme.colorScheme.error,
+                                                size: 16,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Expanded(
                                               child: Column(
                                                 crossAxisAlignment:
                                                     CrossAxisAlignment.start,
                                                 children: [
                                                   Text(
-                                                    'EVALUATION DETAILS',
+                                                    'AI GENERATED RESPONSE',
                                                     style: theme
                                                         .textTheme
                                                         .labelSmall
                                                         ?.copyWith(
+                                                          color: theme
+                                                              .colorScheme
+                                                              .error,
                                                           fontWeight:
                                                               FontWeight.w600,
                                                           letterSpacing: 0.6,
                                                         ),
                                                   ),
-                                                  const SizedBox(height: 6),
+                                                  const SizedBox(height: 4),
                                                   Text(
-                                                    safetyJust,
+                                                    'This response is AI-generated and should not replace professional medical advice. Always verify information with qualified healthcare providers and official medical sources before making any medical decisions.',
                                                     style: theme
                                                         .textTheme
-                                                        .bodySmall,
+                                                        .bodySmall
+                                                        ?.copyWith(
+                                                          color: theme
+                                                              .colorScheme
+                                                              .onSurface
+                                                              .withValues(
+                                                                alpha: 0.7,
+                                                              ),
+                                                          height: 1.4,
+                                                        ),
                                                   ),
                                                 ],
                                               ),
                                             ),
                                           ],
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 20),
-                                    // AI Disclaimer Panel
-                                    Container(
-                                      width: double.infinity,
-                                      padding: const EdgeInsets.all(16),
-                                      decoration: BoxDecoration(
-                                        color: theme.colorScheme.error
-                                            .withValues(alpha: 0.08),
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: theme.colorScheme.error
-                                              .withValues(alpha: 0.25),
                                         ),
                                       ),
-                                      child: Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.all(6),
-                                            decoration: BoxDecoration(
-                                              color: theme.colorScheme.error
-                                                  .withValues(alpha: 0.12),
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                            child: Icon(
-                                              FIcons.messageCircleWarning,
-                                              color: theme.colorScheme.error,
-                                              size: 16,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  'AI GENERATED RESPONSE',
-                                                  style: theme
-                                                      .textTheme
-                                                      .labelSmall
-                                                      ?.copyWith(
-                                                        color: theme
-                                                            .colorScheme
-                                                            .error,
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                        letterSpacing: 0.6,
-                                                      ),
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  'This response is AI-generated and should not replace professional medical advice. Always verify information with qualified healthcare providers and official medical sources before making any medical decisions.',
-                                                  style: theme
-                                                      .textTheme
-                                                      .bodySmall
-                                                      ?.copyWith(
-                                                        color: theme
-                                                            .colorScheme
-                                                            .onSurface
-                                                            .withValues(
-                                                              alpha: 0.7,
-                                                            ),
-                                                        height: 1.4,
-                                                      ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
+                              actions: [
+                                AppButton(
+                                  label: "Close",
+                                  leading: Icon(FIcons.check, size: 16),
+                                  onPressed: () => Navigator.of(ctx).pop(),
+                                ),
+                              ],
                             ),
-                            actions: [
-                              AppButton(
-                                label: "Close",
-                                leading: Icon(FIcons.check, size: 16),
-                                onPressed: () => Navigator.of(ctx).pop(),
-                              ),
-                            ],
                           );
                         },
                       );
@@ -1417,61 +1570,65 @@ class _SessionTileState extends State<_SessionTile>
       builder: (ctx, style, animation) {
         final ctrl = TextEditingController(text: widget.session.title);
         final ftheme = FTheme.of(ctx);
-        return FDialog(
-          style: style,
-          animation: animation,
-          direction: Axis.horizontal,
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: ftheme.colors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  FIcons.pencil,
-                  color: ftheme.colors.primary,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Rename Session',
-                  style: ftheme.typography.lg.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: ftheme.colors.foreground,
+        final maxHeight = MediaQuery.of(context).size.height * 0.7;
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: FDialog(
+            style: style.call,
+            animation: animation,
+            direction: Axis.horizontal,
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: ftheme.colors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    FIcons.pencil,
+                    color: ftheme.colors.primary,
+                    size: 24,
                   ),
                 ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Rename Session',
+                    style: ftheme.typography.lg.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: ftheme.colors.foreground,
+                    ),
+                  ),
+                ),
+                FButton.icon(
+                  style: FButtonStyle.ghost(),
+                  onPress: () => Navigator.pop(ctx),
+                  child: const Icon(FIcons.x),
+                ),
+              ],
+            ),
+            body: Padding(
+              padding: const EdgeInsets.only(top: 12.0),
+              child: CustomTextField(
+                controller: ctrl,
+                hintText: 'Session Title',
+                icon: Icon(FIcons.pencil, color: ftheme.colors.primary),
               ),
-              FButton.icon(
-                style: FButtonStyle.ghost(),
+            ),
+
+            actions: [
+              FButton(
+                style: FButtonStyle.outline(),
                 onPress: () => Navigator.pop(ctx),
-                child: const Icon(FIcons.x),
+                child: const Text('Cancel'),
+              ),
+              FButton(
+                onPress: () => Navigator.pop(ctx, ctrl.text.trim()),
+                child: const Text('Save'),
               ),
             ],
           ),
-          body: Padding(
-            padding: const EdgeInsets.only(top: 12.0),
-            child: CustomTextField(
-              controller: ctrl,
-              hintText: 'Session Title',
-              icon: Icon(FIcons.pencil, color: ftheme.colors.primary),
-            ),
-          ),
-
-          actions: [
-            FButton(
-              style: FButtonStyle.outline(),
-              onPress: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            FButton(
-              onPress: () => Navigator.pop(ctx, ctrl.text.trim()),
-              child: const Text('Save'),
-            ),
-          ],
         );
       },
     );
@@ -1484,26 +1641,32 @@ class _SessionTileState extends State<_SessionTile>
     _controller.hide();
     final confirmed = await showFDialog<bool>(
       context: context,
-      builder: (ctx, style, animation) => FDialog(
-        style: style,
-        animation: animation,
-        title: const Text('Delete Session'),
-        body: const Text(
-          'Are you sure you want to delete this session? This cannot be undone.',
-        ),
-        actions: [
-          FButton(
-            style: FButtonStyle.destructive(),
-            onPress: () => Navigator.of(ctx).pop(true),
-            child: const Text('Delete'),
+      builder: (ctx, style, animation) {
+        final maxHeight = MediaQuery.of(context).size.height * 0.7;
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: FDialog(
+            style: style.call,
+            animation: animation,
+            title: const Text('Delete Session'),
+            body: const Text(
+              'Are you sure you want to delete this session? This cannot be undone.',
+            ),
+            actions: [
+              FButton(
+                style: FButtonStyle.destructive(),
+                onPress: () => Navigator.of(ctx).pop(true),
+                child: const Text('Delete'),
+              ),
+              FButton(
+                style: FButtonStyle.outline(),
+                onPress: () => Navigator.of(ctx).pop(false),
+                child: const Text('Cancel'),
+              ),
+            ],
           ),
-          FButton(
-            style: FButtonStyle.outline(),
-            onPress: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
-          ),
-        ],
-      ),
+        );
+      },
     );
 
     if (confirmed == true) {
@@ -1688,6 +1851,204 @@ class _SessionAction extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Action buttons for AI messages (like, dislike, feedback)
+class _MessageActionButtons extends StatefulWidget {
+  final ChatMessage message;
+  final Function(String messageId, String action) onLike;
+  final Function(String messageId) onFeedback;
+
+  const _MessageActionButtons({
+    super.key,
+    required this.message,
+    required this.onLike,
+    required this.onFeedback,
+  });
+
+  @override
+  State<_MessageActionButtons> createState() => _MessageActionButtonsState();
+}
+
+class _MessageActionButtonsState extends State<_MessageActionButtons> {
+  bool _isLikeLoading = false;
+  bool _isDislikeLoading = false;
+
+  Future<void> _handleLikeAction() async {
+    setState(() => _isLikeLoading = true);
+    try {
+      final action = widget.message.liked == true ? 'unlike' : 'like';
+      await widget.onLike(widget.message.id, action);
+    } finally {
+      if (mounted) {
+        setState(() => _isLikeLoading = false);
+      }
+    }
+  }
+
+  Future<void> _handleDislikeAction() async {
+    setState(() => _isDislikeLoading = true);
+    try {
+      final action = widget.message.liked == false ? 'unlike' : 'dislike';
+      await widget.onLike(widget.message.id, action);
+    } finally {
+      if (mounted) {
+        setState(() => _isDislikeLoading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = FTheme.of(context);
+
+    // Get the latest message state from the provider
+    final chatProvider = context.watch<ChatProvider>();
+    final messages = chatProvider.messagesFor(widget.message.sessionId);
+    final latestMessage = messages.firstWhere(
+      (m) => m.id == widget.message.id,
+      orElse: () => widget.message,
+    );
+
+    return Row(
+      children: [
+        // Like button
+        _ActionButton(
+          icon: FIcons.thumbsUp,
+          isActive: latestMessage.liked == true,
+          isLoading: _isLikeLoading,
+          onTap: _isLikeLoading
+              ? null
+              : () {
+                  _handleLikeAction();
+                },
+          tooltip: latestMessage.liked == true
+              ? 'Unlike this response'
+              : 'Like this response',
+        ),
+        const SizedBox(width: 8),
+        // Dislike button
+        _ActionButton(
+          icon: FIcons.thumbsDown,
+          isActive: latestMessage.liked == false,
+          isLoading: _isDislikeLoading,
+          onTap: _isDislikeLoading
+              ? null
+              : () {
+                  _handleDislikeAction();
+                },
+          tooltip: latestMessage.liked == false
+              ? 'Remove dislike'
+              : 'Dislike this response',
+        ),
+        const SizedBox(width: 8),
+        // Feedback button
+        _ActionButton(
+          icon: FIcons.messageSquare,
+          isActive: latestMessage.hasFeedback,
+          onTap: () => widget.onFeedback(latestMessage.id),
+          tooltip: latestMessage.hasFeedback
+              ? 'Edit feedback'
+              : 'Provide feedback',
+        ),
+        const SizedBox(width: 8),
+        // Feedback indicator
+        if (latestMessage.hasFeedback && latestMessage.feedbackStars != null)
+          Row(
+            children: [
+              Icon(FIcons.star, size: 12, color: Colors.amber),
+              const SizedBox(width: 2),
+              Text(
+                '${latestMessage.feedbackStars}',
+                style: theme.typography.xs.copyWith(
+                  color: theme.colors.mutedForeground,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+}
+
+/// Individual action button widget
+class _ActionButton extends StatelessWidget {
+  final IconData icon;
+  final bool isActive;
+  final VoidCallback? onTap;
+  final String tooltip;
+  final bool isLoading;
+
+  const _ActionButton({
+    required this.icon,
+    required this.isActive,
+    required this.onTap,
+    required this.tooltip,
+    this.isLoading = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = FTheme.of(context);
+    final activeColor = theme.colors.primary;
+    final inactiveColor = theme.colors.mutedForeground;
+
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: isLoading ? null : onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: isActive
+                  ? activeColor.withValues(alpha: 0.1)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: isActive
+                    ? activeColor.withValues(alpha: 0.3)
+                    : Colors.transparent,
+                width: 1,
+              ),
+            ),
+            child: isLoading
+                ? SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: isActive ? activeColor : inactiveColor,
+                    ),
+                  )
+                : Stack(
+                    children: [
+                      // Base icon
+                      Icon(
+                        icon,
+                        size: 14,
+                        color: isActive ? activeColor : inactiveColor,
+                      ),
+                      // Overlay the same icon with slight offset for bold effect when active
+                      if (isActive)
+                        Positioned(
+                          left: 0.3,
+                          child: Icon(
+                            icon,
+                            size: 14,
+                            color: activeColor.withValues(alpha: 0.6),
+                          ),
+                        ),
+                    ],
+                  ),
           ),
         ),
       ),

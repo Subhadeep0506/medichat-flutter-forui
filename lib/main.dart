@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:forui/forui.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/patient_provider.dart';
@@ -15,6 +19,7 @@ import 'providers/onboarding_provider.dart';
 import 'providers/current_patient_provider.dart';
 import 'providers/current_case_provider.dart';
 import 'providers/loading_animation_provider.dart';
+import 'providers/splash_provider.dart';
 
 import 'services/api_service.dart';
 import 'screens/dashboard.dart';
@@ -27,17 +32,57 @@ import 'screens/case_chat_wrapper.dart';
 import 'screens/add_patient.dart';
 import 'screens/add_case.dart';
 import 'screens/onboard_screen.dart';
+import 'screens/splash_screen.dart';
 import 'bootstrap_remote.dart';
 import 'config/app_config.dart';
 import 'services/toast_service.dart';
 import 'services/global_token_expiration_service.dart';
-import 'widgets/app_loading_widget.dart';
+import 'utils/app_logger.dart';
 
-void main() {
+void main() async {
+  // Ensure Flutter binding is initialized
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Initialize AppLogger and Crashlytics
+  await AppLogger.initCrashlytics();
+
+  // Only set up Crashlytics error handlers if it's properly initialized
+  if (AppLogger.isCrashlyticsEnabled) {
+    FlutterError.onError = (errorDetails) {
+      FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+    };
+
+    // Pass all uncaught asynchronous errors to Crashlytics
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
+    };
+  } else {
+    // Fallback error handlers when Crashlytics is not available
+    FlutterError.onError = (errorDetails) {
+      AppLogger.error(
+        'Flutter Error',
+        errorDetails.exception,
+        errorDetails.stack ?? StackTrace.current,
+      );
+    };
+
+    PlatformDispatcher.instance.onError = (error, stack) {
+      AppLogger.error('Async Error', error, stack);
+      return true;
+    };
+  }
+
+  AppLogger.info('MediChat app starting...');
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => SplashProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider(AuthApiService())),
         ChangeNotifierProvider(
           create: (_) => PatientProvider(PatientApiService()),
@@ -59,23 +104,33 @@ void main() {
   );
 }
 
-GoRouter _buildRouter(AuthProvider auth, OnboardingProvider onboarding) {
+GoRouter _buildRouter(
+  AuthProvider auth,
+  OnboardingProvider onboarding,
+  SplashProvider splash,
+) {
   // Create a new navigator key for GoRouter
   final navigatorKey = GlobalKey<NavigatorState>();
 
   // Set it in the GlobalTokenExpirationService for token handling
   GlobalTokenExpirationService.setNavigatorKey(navigatorKey);
 
+  ToastService.setNavigatorKey(navigatorKey);
+
   return GoRouter(
     navigatorKey: navigatorKey,
     refreshListenable: Listenable.merge([
       auth,
       onboarding,
-    ]), // Listen to both auth and onboarding changes
-    // Use preserved location during hot reloads, fallback to root
-    initialLocation: _MyAppState._lastKnownLocation ?? '/',
+      splash,
+    ]), // Listen to auth, onboarding, and splash changes
+    // Use preserved location during hot reloads, fallback to splash
+    initialLocation: _MyAppState._lastKnownLocation ?? '/splash',
     errorBuilder: (context, state) {
-      debugPrint('Router error: ${state.error}');
+      // Don't log errors here to avoid Crashlytics initialization issues
+      if (kDebugMode) {
+        AppLogger.error('Router error: ${state.error}');
+      }
       return const FScaffold(
         child: Center(
           child: Column(
@@ -92,35 +147,90 @@ GoRouter _buildRouter(AuthProvider auth, OnboardingProvider onboarding) {
     redirect: (context, state) {
       try {
         final location = state.matchedLocation;
+        final onSplash = location == '/splash';
         final loggingIn = location == '/login' || location == '/register';
         final onOnboard = location == '/onboard';
         final seen = onboarding.hasSeen;
 
-        debugPrint(
-          'Router redirect: location=$location, auth=${auth.isAuthenticated}, loading=${auth.isLoading}, onboarding=${onboarding.loaded}',
-        );
+        if (kDebugMode) {
+          AppLogger.debug(
+            'Router redirect: location=$location, auth=${auth.isAuthenticated}, loading=${auth.isLoading}, onboarding loaded=${onboarding.loaded}, hasSeen=${onboarding.hasSeen}, splash=${splash.showSplash}',
+          );
+        }
+
+        // Show splash screen on initial load
+        if (splash.showSplash && !onSplash) {
+          if (kDebugMode) {
+            AppLogger.debug('Router: showing splash screen');
+          }
+          return '/splash';
+        }
+
+        // If splash is done and we're on splash screen, redirect based on state
+        if (!splash.showSplash && onSplash) {
+          if (!onboarding.loaded) {
+            if (kDebugMode) {
+              AppLogger.debug(
+                'Router: splash done, waiting for onboarding to load',
+              );
+            }
+            return null;
+          }
+
+          if (!auth.isAuthenticated && !seen) {
+            if (kDebugMode) {
+              AppLogger.debug('Router: splash done, going to onboarding');
+            }
+            return '/onboard';
+          }
+
+          if (!auth.isAuthenticated) {
+            if (kDebugMode) {
+              AppLogger.debug('Router: splash done, going to login');
+            }
+            return '/login';
+          }
+
+          if (kDebugMode) {
+            AppLogger.debug('Router: splash done, going to dashboard');
+          }
+          return _MyAppState._lastKnownLocation ?? '/?tab=0';
+        }
 
         // Still loading onboarding state: don't redirect yet.
         if (!onboarding.loaded) {
-          debugPrint('Router: onboarding not loaded, no redirect');
+          if (kDebugMode) {
+            AppLogger.debug(
+              'Router: onboarding not loaded, staying at $location',
+            );
+          }
+          // Stay on current location until loaded
           return null;
         }
 
         // If authentication is in progress, don't redirect to prevent interruption
         if (auth.isLoading) {
-          debugPrint('Router: auth loading, no redirect');
+          if (kDebugMode) {
+            AppLogger.debug('Router: auth loading, no redirect');
+          }
           return null;
         }
         if (loggingIn || onOnboard) {
           if (auth.isAuthenticated) {
             // Redirect authenticated users off auth pages to last known location or dashboard
             final redirect = _MyAppState._lastKnownLocation ?? '/?tab=0';
-            debugPrint(
-              'Router: authenticated on auth page, redirecting to $redirect',
-            );
+            if (kDebugMode) {
+              AppLogger.debug(
+                'Router: authenticated on auth page, redirecting to $redirect',
+              );
+            }
             return redirect;
           }
-          debugPrint('Router: on auth page but not authenticated, staying');
+          if (kDebugMode) {
+            AppLogger.debug(
+              'Router: on auth page but not authenticated, staying',
+            );
+          }
           return null;
         }
 
@@ -139,6 +249,11 @@ GoRouter _buildRouter(AuthProvider auth, OnboardingProvider onboarding) {
 
         // For unauthenticated users: check onboarding status
         if (!seen && !onOnboard) {
+          if (kDebugMode) {
+            AppLogger.debug(
+              'Router: user has not seen onboarding, redirecting to /onboard',
+            );
+          }
           return '/onboard';
         }
 
@@ -148,15 +263,31 @@ GoRouter _buildRouter(AuthProvider auth, OnboardingProvider onboarding) {
           _MyAppState._lastKnownLocation = null;
           // If they've seen onboarding, go to login, otherwise go to onboarding
           final redirectTo = seen ? '/login' : '/onboard';
+          if (kDebugMode) {
+            AppLogger.debug(
+              'Router: user not authenticated, redirecting to $redirectTo',
+            );
+          }
           return redirectTo;
+        }
+
+        if (kDebugMode) {
+          AppLogger.debug('Router: no redirect needed, staying at $location');
         }
         return null;
       } catch (e) {
-        debugPrint('Router redirect error: $e');
+        if (kDebugMode) {
+          AppLogger.error('Router redirect error: $e');
+        }
         return null;
       }
     },
     routes: <RouteBase>[
+      GoRoute(
+        path: '/splash',
+        builder: (BuildContext context, GoRouterState state) =>
+            const SplashScreen(),
+      ),
       GoRoute(
         path: '/',
         builder: (BuildContext context, GoRouterState state) =>
@@ -236,7 +367,9 @@ GoRouter _buildRouter(AuthProvider auth, OnboardingProvider onboarding) {
           try {
             return const LoginScreen();
           } catch (e) {
-            debugPrint('Error building LoginScreen: $e');
+            if (kDebugMode) {
+              AppLogger.error('Error building LoginScreen: $e');
+            }
             return const FScaffold(
               child: Center(child: Text('Error loading login screen')),
             );
@@ -249,7 +382,9 @@ GoRouter _buildRouter(AuthProvider auth, OnboardingProvider onboarding) {
           try {
             return const RegisterScreen();
           } catch (e) {
-            debugPrint('Error building RegisterScreen: $e');
+            if (kDebugMode) {
+              AppLogger.error('Error building RegisterScreen: $e');
+            }
             return const FScaffold(
               child: Center(child: Text('Error loading register screen')),
             );
@@ -267,7 +402,9 @@ GoRouter _buildRouter(AuthProvider auth, OnboardingProvider onboarding) {
           try {
             return const OnboardScreen();
           } catch (e) {
-            debugPrint('Error building OnboardScreen: $e');
+            if (kDebugMode) {
+              AppLogger.error('Error building OnboardScreen: $e');
+            }
             return const FScaffold(
               child: Center(child: Text('Error loading onboarding screen')),
             );
@@ -317,29 +454,37 @@ class _MyAppState extends State<MyApp> {
 
       if (AppConfig.useRemoteAPI) {
         if (AppConfig.enableDebugLogging) {
-          print('App: Enabling remote API backend');
+          AppLogger.info('App: Enabling remote API backend');
         }
         try {
           // Enable remote services immediately using the available BuildContext.
           enableRemoteBackend(context);
         } catch (e) {
-          debugPrint('Error enabling remote backend: $e');
+          if (kDebugMode) {
+            AppLogger.error('Error enabling remote backend: $e');
+          }
         }
       } else {
         if (AppConfig.enableDebugLogging) {
-          print('App: Using mock API services with sample data');
+          AppLogger.info('App: Using mock API services with sample data');
         }
       }
+
+      // Initialize splash - this ensures minimum 2 seconds from app start
+      final splashProvider = context.read<SplashProvider>();
+      await splashProvider.initialize();
     } catch (e) {
-      debugPrint('Error initializing app: $e');
+      if (kDebugMode) {
+        AppLogger.error('Error initializing app: $e');
+      }
       rethrow;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer2<ThemeProvider, AuthProvider>(
-      builder: (context, themeProvider, authProvider, child) {
+    return Consumer3<ThemeProvider, AuthProvider, SplashProvider>(
+      builder: (context, themeProvider, authProvider, splashProvider, child) {
         final isDark = themeProvider.isDark(context);
         final baseTheme = isDark ? FThemes.zinc.dark : FThemes.zinc.light;
 
@@ -431,6 +576,7 @@ class _MyAppState extends State<MyApp> {
           builder: (context, snapshot) {
             final onboardingProvider = context.watch<OnboardingProvider>();
 
+            // Show splash screen during initialization
             if (snapshot.hasError ||
                 !authProvider.initialized ||
                 !onboardingProvider.loaded ||
@@ -444,24 +590,38 @@ class _MyAppState extends State<MyApp> {
                   ...FLocalizations.localizationsDelegates,
                 ],
                 theme: materialTheme,
-                builder: (_, child) => child != null
-                    ? FAnimatedTheme(data: fTheme, child: child)
-                    : const SizedBox.shrink(),
-                home: FScaffold(
-                  child: Consumer<LoadingAnimationProvider>(
-                    builder: (context, provider, child) => Center(
-                      child: provider.initialized
-                          ? const AppLoadingWidget.large()
-                          : const CircularProgressIndicator(),
-                    ),
+                builder: (_, child) => FAnimatedTheme(
+                  data: fTheme,
+                  child: Builder(
+                    builder: (context) {
+                      final toasterStyle = context.theme.toasterStyle.copyWith(
+                        expandBehavior: FToasterExpandBehavior.always,
+                      );
+
+                      return FToaster(
+                        style: toasterStyle.call,
+                        child: Builder(
+                          builder: (context) {
+                            ToastService.registerContext(context);
+                            return child ?? const SizedBox.shrink();
+                          },
+                        ),
+                      );
+                    },
                   ),
                 ),
+                home:
+                    const SplashScreen(), // Show splash screen during initialization
               );
             }
 
             try {
               // Create router only once to prevent rebuilding on theme changes
-              _router ??= _buildRouter(authProvider, onboardingProvider);
+              _router ??= _buildRouter(
+                authProvider,
+                onboardingProvider,
+                splashProvider,
+              );
               return MaterialApp.router(
                 scaffoldMessengerKey: ToastService.scaffoldMessengerKey,
                 routerConfig: _router!,
@@ -473,23 +633,40 @@ class _MyAppState extends State<MyApp> {
                 ],
                 theme: materialTheme,
                 builder: (context, child) {
-                  return child != null
-                      ? FAnimatedTheme(
-                          data: fTheme,
+                  final routedChild =
+                      child ??
+                      const FScaffold(
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+
+                  return FAnimatedTheme(
+                    data: fTheme,
+                    child: Builder(
+                      builder: (context) {
+                        final toasterStyle = context.theme.toasterStyle
+                            .copyWith(
+                              expandBehavior: FToasterExpandBehavior.always,
+                            );
+
+                        return FToaster(
+                          style: toasterStyle.call,
                           child: Builder(
                             builder: (context) {
+                              ToastService.registerContext(context);
                               // Wrap in an error boundary
-                              return child;
+                              return routedChild;
                             },
                           ),
-                        )
-                      : const FScaffold(
-                          child: Center(child: CircularProgressIndicator()),
                         );
+                      },
+                    ),
+                  );
                 },
               );
             } catch (e) {
-              debugPrint('Error building router: $e');
+              if (kDebugMode) {
+                AppLogger.error('Error building router: $e');
+              }
               return MaterialApp(
                 title: 'MediChat - Error',
                 scaffoldMessengerKey: ToastService.scaffoldMessengerKey,

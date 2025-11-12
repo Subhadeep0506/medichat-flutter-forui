@@ -2,6 +2,18 @@
 
 A medical chat application with AI assistance for radiology and clinical consultations.
 
+## Table of Contents
+
+- [Features](#features)
+- [Project Overview](#project-overview)
+- [Getting Started](#getting-started)
+- [Theming and UI](#theming-and-ui)
+- [Logging Integration](#logging-integration)
+- [API Integration](#api-integration)
+- [Development Guidelines](#development-guidelines)
+- [Contributing](#contributing)
+- [License](#license)
+
 ## Features
 
 ### Chat Settings
@@ -31,6 +43,49 @@ The chat interface includes configurable settings to control AI response quality
 3. Click "Save Settings" to apply changes
 4. Settings are automatically included in all subsequent chat requests
 
+## Project Overview
+
+### Overview
+
+This document outlines the design, features, and implementation plan for the Flutter application.
+
+### Style, Design, and Features
+
+#### Initial Version
+
+*   **Authentication:**
+    *   Login Screen
+    *   Registration Screen
+*   **Dashboard:**
+    *   Basic dashboard screen after login.
+*   **Routing:**
+    *   `go_router` for navigation.
+*   **Styling:**
+    *   `google_fonts` for custom fonts.
+    *   A simple, consistent color scheme.
+
+#### Current Version
+
+*   **Authentication:**
+    *   Redesigned Login Screen with a modern, clean UI, featuring an image, custom text fields, and a clear call to action.
+    *   Redesigned Registration Screen that mirrors the new login screen's aesthetic for a consistent user experience.
+*   **Styling:**
+    *   Updated `ThemeData` to reflect the new design, including a new primary color (`0xFF2F8075`), updated text styles, and button themes.
+    *   Use of `flutter_svg` for scalable vector graphics.
+*   **Routing:**
+    *   Initial route set to `/login`.
+
+### Current Plan
+
+*   **Task:** Update the login and register pages to match the new design.
+*   **Steps:**
+    1.  Update the `LoginScreen` with the new UI.
+    2.  Update the `RegisterScreen` with the new UI.
+    3.  Add the `flutter_svg` dependency for SVG image support.
+    4.  Run `flutter pub get` to install the new dependency.
+    5.  Update `lib/main.dart` to ensure the new screens are integrated correctly and the theme is updated.
+    6.  Create a `blueprint.md` file to document the project.
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.
@@ -43,3 +98,862 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+
+### Prerequisites
+
+- Flutter SDK (version 3.35.0 or higher)
+- Dart SDK
+- Android Studio or VS Code with Flutter extensions
+- For Firebase integration: Firebase CLI and FlutterFire CLI
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/Subhadeep0506/medichat-flutter-forui.git
+   cd medichat-flutter-forui
+   ```
+
+2. Install dependencies:
+   ```bash
+   flutter pub get
+   ```
+
+3. Run the app:
+   ```bash
+   flutter run
+   ```
+
+## Theming and UI
+
+### Forui Theming Guide
+
+This guide explains how to set up, customize, and extend Forui themes for consistent, powerful design in any Flutter app.
+
+#### Getting Started
+
+Forui themes establish a consistent visual style across your application. Themes must be explicitly set—they do not switch between dark/light automatically.
+
+**Basic Theme Setup:**
+```dart
+@override
+Widget build(BuildContext context) => FTheme(
+  data: FThemes.zinc.light, // or FThemes.zinc.dark
+  child: FScaffold(...),
+);
+```
+- Use `FThemes.[name].light` or `.dark` for built-in themes.
+
+#### Predefined Themes
+
+Forui comes with multiple out-of-the-box color themes, inspired by shadcn/ui.
+
+| Theme   | Light            | Dark           |
+|---------|------------------|---------------|
+| Zinc    | FThemes.zinc.light | FThemes.zinc.dark |
+| Slate   | FThemes.slate.light | FThemes.slate.dark |
+| Red     | FThemes.red.light | FThemes.red.dark   |
+| Rose    | FThemes.rose.light | FThemes.rose.dark |
+| Orange  | FThemes.orange.light | FThemes.orange.dark |
+| Green   | FThemes.green.light | FThemes.green.dark |
+| Blue    | FThemes.blue.light | FThemes.blue.dark  |
+| Yellow  | FThemes.yellow.light | FThemes.yellow.dark |
+| Violet  | FThemes.violet.light | FThemes.violet.dark |
+
+**Example:**
+```dart
+final FThemeData theme = FThemes.green.dark;
+```
+
+#### Core Theming Components
+
+- **FTheme:** Root widget providing theming for its subtree.
+- **FThemeData:** Holds all theme info—colors, typography, style, and widget-specific styles.
+- **FColors:** Color scheme (backgrounds, foregrounds, primary, secondary, etc.).
+- **FTypography:** Font family and size definitions, inspired by Tailwind CSS.
+- **FStyle:** Misc styling (border radius, icon size, etc.).
+- **Widget Styles:** Per-widget customization for deeper theming control.
+
+**Access in Widget Tree:**
+```dart
+final FThemeData theme = context.theme;
+final FColors colors = theme.colors;
+final FTypography typography = theme.typography;
+final FStyle style = theme.style;
+```
+
+#### Colors
+
+`FColors` groups pairs of background + foreground (text/icon) for every color role.
+
+- Example:
+  - `primary` & `primaryForeground`
+  - `secondary`, `destructive`, etc.
+
+**Usage Example:**
+```dart
+final colors = context.theme.colors;
+return ColoredBox(
+  color: colors.primary,
+  child: Text('Text', style: TextStyle(color: colors.primaryForeground)),
+);
+```
+- For hovered/disabled states: use `colors.hover()` and `colors.disable()` methods.
+
+#### Typography
+
+`FTypography` provides font sizes/styles (`xs`, `sm`, `base`, `lg`, `xl`, etc.), following Tailwind CSS's sizing.
+
+- Use `copyWith()` to override/add style properties.
+- Use `scale()` for quick scaling (e.g., switching default font size).
+
+**Usage Example:**
+```dart
+// ... (content from FORUI_THEMEING.md continues)
+```
+
+*(Note: Full theming guide available in `FORUI_THEMEING.md`)*
+
+### Forui Usage Guide
+
+This guide details the steps required to integrate, configure, and use the Forui package and its widgets in Flutter apps.
+
+#### Installation
+
+Ensure that Flutter version 3.35.0 or higher is installed.
+
+1. **Add Forui to your project:**
+   ```
+   flutter pub add forui
+   ```
+
+2. **Verify Flutter version:**
+   ```
+   flutter --version
+   ```
+
+#### Using Forui Icons
+
+- **Default:** All Forui icons are included with the `forui` package.
+- **Icon-only setup:** If you need just the icons without full Forui, run:
+   ```
+   flutter pub add forui_assets
+   ```
+
+#### Setting Up Forui in Your App
+
+1. **Import the Package:**
+   ```dart
+   import 'package:forui/forui.dart';
+   ```
+
+2. **Wrap the Root Widget:**
+   - Place the `FAnimatedTheme` below `MaterialApp`, `CupertinoApp`, or `WidgetsApp`:
+
+   ```dart
+   import 'package:flutter/material.dart';
+   import 'package:forui/forui.dart';
+
+   void main() {
+     runApp(const Application());
+   }
+
+   class Application extends StatelessWidget {
+     const Application({super.key});
+
+     @override
+     Widget build(BuildContext context) {
+       final theme = FThemes.zinc.dark;
+
+       return MaterialApp(
+         supportedLocales: FLocalizations.supportedLocales,
+         localizationsDelegates: const [...FLocalizations.localizationsDelegates],
+         theme: theme.toApproximateMaterialTheme(),
+         builder: (_, child) => FAnimatedTheme(data: theme, child: child!),
+         home: const FScaffold(child: Example()),
+       );
+     }
+   }
+   ```
+
+3. **Working Example:**
+   ```dart
+   class Example extends StatefulWidget {
+     const Example({super.key});
+     @override
+     State<Example> => _ExampleState();
+   }
+
+   class _ExampleState extends State<Example> {
+     int _count = 0;
+     @override
+     Widget build(BuildContext context) => Center(
+       child: Column(
+         mainAxisSize: MainAxisSize.min,
+         // Use 'spacing' as Forui supports spacing prop
+         children: [
+           Text('Count: $_count'),
+           FButton(
+             onPress: () => setState(() => _count++),
+             suffix: const Icon(FIcons.chevronsUp),
+             child: const Text('Increase'),
+           ),
+         ],
+       ),
+     );
+   }
+   ```
+
+*(Note: Full usage guide available in `FORUI_USAGE_GUIDE.md`)*
+
+## Logging Integration
+
+### Logging Integration Complete!
+
+#### What's Been Implemented
+
+✅ **Logger Package** - Beautiful, colorful console logging  
+✅ **Firebase Crashlytics** - Production crash reporting and monitoring  
+✅ **AppLogger Utility** - Unified logging interface combining both  
+✅ **Error Boundaries** - Automatic crash capture for Flutter errors  
+✅ **Main App Integration** - All `debugPrint`/`print` statements converted  
+
+#### Files Created/Modified
+
+**New Files:**
+- ✨ `lib/utils/app_logger.dart` - Centralized logging utility
+- ✨ `lib/firebase_options.dart` - Firebase configuration (needs setup)
+- ✨ `LOGGING_SETUP.md` - Complete setup guide
+- ✨ `LOGGING_EXAMPLES.md` - Code examples and best practices
+
+**Modified Files:**
+- 📝 `pubspec.yaml` - Added logger, firebase_core, firebase_crashlytics
+- 📝 `lib/main.dart` - Firebase init + converted logs to AppLogger
+
+#### Quick Start
+
+**For Development (Works Right Now!)**
+
+The logger works immediately without Firebase setup:
+
+```bash
+flutter run
+```
+
+You'll see beautiful, colorful logs in your console:
+```
+💡 INFO: MediChat app starting...
+🐛 DEBUG: Router redirect: location=/login
+```
+
+**For Production (Requires Firebase Setup)**
+
+To enable Crashlytics, follow these steps:
+
+1. **Install Firebase CLI & FlutterFire CLI:**
+   ```bash
+   npm install -g firebase-tools
+   dart pub global activate flutterfire_cli
+   ```
+
+2. **Login and Configure:**
+   ```bash
+   firebase login
+   flutterfire configure
+   ```
+
+3. **That's it!** Your app will now:
+   - Send crash reports to Firebase
+   - Log errors with full context
+   - Track user issues in production
+
+📚 **See `LOGGING_SETUP.md` for detailed instructions**
+
+#### How to Use AppLogger
+
+**Basic Logging:**
+
+```dart
+import 'utils/app_logger.dart';
+
+// Development debugging (only visible in debug mode)
+AppLogger.debug('Loading patients...');
+
+// General information (always logged, sent to Crashlytics)
+AppLogger.info('User logged in successfully');
+
+// Warnings (non-fatal issues in Crashlytics)
+AppLogger.warning('API response slow', slowError);
+
+// Errors (recorded in Crashlytics)
+AppLogger.error('Failed to load patients', error, stackTrace);
+
+// Fatal crashes (critical errors)
+AppLogger.fatal('Critical failure', error, stackTrace);
+```
+
+**With Context (Better Debugging):**
+
+```dart
+AppLogger.error('Payment failed', error, stackTrace, {
+  'amount': 100.00,
+  'payment_method': 'credit_card',
+  'user_id': userId,
+});
+```
+
+*(Note: Full logging setup and examples available in `LOGGING_SETUP.md` and `LOGGING_EXAMPLES.md`)*
+
+## API Integration
+
+### Backend Endpoint Verification
+
+#### Current Token Refresh Endpoint
+
+The Flutter app is currently configured to call:
+```
+POST /auth/relogin
+```
+
+With body:
+```json
+{
+  "refresh_token": "<refresh_token>"
+}
+```
+
+Expected response:
+```json
+{
+  "access_token": "<new_access_token>",
+  "refresh_token": "<refresh_token>"
+}
+```
+
+#### Common FastAPI JWT Patterns
+
+Most FastAPI applications use one of these endpoints for token refresh:
+
+1. **Standard OAuth2 Pattern:**
+   - Endpoint: `POST /auth/refresh` or `POST /token/refresh`
+   - Body: `{ "refresh_token": "<token>" }`
+
+2. **Alternative Pattern:**
+   - Endpoint: `POST /auth/token/refresh`
+   - Header: `Authorization: Bearer <refresh_token>`
+
+#### How to Verify
+
+1. **Check the backend repository** for the actual endpoint definition
+2. **Test the endpoint** using curl or Postman:
+
+```bash
+# Test current endpoint
+curl -X POST "https://qwen-3-mental-health-chatbot-fastapi-subhadeepdouble-8rs5pdz.leapcell.dev/api/v1/auth/relogin" \
+  -H "Content-Type: application/json" \
+  -d '{"refresh_token": "YOUR_REFRESH_TOKEN"}'
+
+# Test alternative endpoint
+curl -X POST "https://qwen-3-mental-health-chatbot-fastapi-subhadeepdouble-8rs5pd9z.leapcell.dev/api/v1/auth/refresh" \
+  -H "Content-Type: application/json" \
+  -d '{"refresh_token": "YOUR_REFRESH_TOKEN"}'
+```
+
+3. **Check the API documentation** at:
+   - `<backend_url>/docs` (Swagger UI)
+   - `<backend_url>/redoc` (ReDoc)
+
+#### Recommended Fix
+
+If the backend uses `/auth/refresh` instead of `/auth/relogin`, update the endpoint in:
+- File: `lib/services/remote_api_service.dart`
+- Line: 129
+- Change: `'${RemoteApiConfig.baseUrl}/auth/relogin'` to `'${RemoteApiConfig.baseUrl}/auth/refresh'`
+
+### Token Refresh Fix - Summary
+
+#### Problem
+The Retry button on the dashboard wasn't properly refreshing expired access tokens when the user pressed it. The token would remain invalid and requests would continue to fail.
+
+#### Root Cause Analysis
+
+The application had **two conflicting token refresh mechanisms**:
+
+1. **Built-in automatic refresh in `RemotePatientService._sendWithRetry()`**: 
+   - Automatically detects 401/403 responses
+   - Calls the refresh callback (`auth.relogin()`)
+   - Retries the request with the new token
+
+2. **Manual refresh via `handleTokenExpiration()` wrapper**:
+   - Expected `TokenExpiredException` to be thrown
+   - Was wrapped around the Retry button call
+   - **Never actually triggered** because `TokenExpiredException` was never thrown
+
+#### Changes Made
+
+1. **dashboard.dart** - Removed redundant wrapper
+2. **remote_api_service.dart** - Added debug logging
+3. **auth_provider.dart** - Enhanced relogin logging
+4. **patient_provider.dart** - Removed unused exception handling
+
+#### How It Works Now
+
+**Token Refresh Flow**
+
+1. **User clicks Retry button** on dashboard
+2. **Calls** `patientProvider.refresh()`
+3. **Provider calls** `RemotePatientService.list()`
+4. **Service calls** `_sendWithRetry()` which:
+   - Makes HTTP request to backend
+   - If 401/403, calls refresh callback
+   - Retries with new token
+
+*(Note: Full details available in `TOKEN_REFRESH_FIX.md`)*
+
+### ✅ Firebase Core
+- Firebase SDK initialized in `main.dart`
+- Configuration file ready: `lib/firebase_options.dart`
+- No compilation errors
+
+### ✅ Firebase Crashlytics
+- Error handlers configured for:
+  - `FlutterError.onError` - Flutter framework errors
+  - `PlatformDispatcher.instance.onError` - Async errors
+- AppLogger integrated with Crashlytics
+- Graceful fallback if Firebase not configured
+
+### ✅ AppLogger
+- Beautiful console logging with colors & emojis
+- All Crashlytics methods wrapped in try-catch
+- Defensive programming - won't crash if Firebase unavailable
+- HIPAA-compliant logging patterns
+
+---
+
+## 📊 Analysis Results
+
+```bash
+flutter analyze
+```
+
+**Result**: ✅ **No errors found**
+
+- 0 compilation errors
+- 0 Firebase errors  
+- 0 Crashlytics errors
+- 78 informational warnings (pre-existing style suggestions)
+
+---
+
+## 🔥 Firebase Integration Status
+
+### Current Configuration
+
+**Main App** (`lib/main.dart`):
+```dart
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // ✅ Firebase initialized
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  
+  // ✅ Crashlytics error handlers configured
+  FlutterError.onError = (errorDetails) {
+    AppLogger.fatal(
+      'Flutter Error',
+      errorDetails.exception,
+      errorDetails.stack ?? StackTrace.current,
+    );
+  };
+  
+  PlatformDispatcher.instance.onError = (error, stack) {
+    AppLogger.fatal('Async Error', error, stack);
+    return true;
+  };
+  
+  // ✅ AppLogger initialized with Crashlytics
+  AppLogger.initCrashlytics();
+  AppLogger.info('MediChat app starting...');
+  
+  runApp(...);
+}
+```
+
+### What Happens When You Run
+
+1. **Firebase Initializes** from `firebase_options.dart`
+2. **Crashlytics Connects** (if properly configured)
+3. **Error Handlers Activate** to catch all crashes
+4. **AppLogger Detects** Firebase availability
+5. **Console Logs Appear** with beautiful formatting
+
+---
+
+## 🚀 Next Steps
+
+### Option 1: Run with Mock Firebase Config (Current State)
+
+Your app will run with the placeholder Firebase configuration:
+- ✅ Logger works perfectly (console output)
+- ⚠️ Crashlytics will show warning (but won't crash)
+- ✅ All features functional
+
+**Run now:**
+```bash
+flutter run
+```
+
+**Console output:**
+```
+⚠️  WARNING: Firebase Crashlytics not available - logging to console only
+💡 INFO: MediChat app starting...
+🐛 DEBUG: Router redirect: location=/login, auth=false
+```
+
+### Option 2: Complete Firebase Setup (Production Ready)
+
+To enable full Crashlytics functionality:
+
+1. **Create Firebase Project**
+   - Go to: https://console.firebase.google.com
+   - Create new project or select existing
+   - Enable Crashlytics in console
+
+2. **Install FlutterFire CLI**
+   ```bash
+   dart pub global activate flutterfire_cli
+   ```
+
+3. **Configure Your Project**
+   ```bash
+   firebase login
+   flutterfire configure --project=your-project-id
+   ```
+   This will auto-generate real Firebase config in `lib/firebase_options.dart`
+
+4. **Run Your App**
+   ```bash
+   flutter run
+   ```
+
+5. **View Crashes in Firebase Console**
+   - Navigate to: Crashlytics → Dashboard
+   - See real-time crash reports
+   - View user context and custom logs
+
+---
+
+## 🎨 AppLogger Usage
+
+All logging methods work immediately (with or without Firebase):
+
+### Basic Logging
+```dart
+import 'utils/app_logger.dart';
+
+// Development debugging (only visible in debug mode)
+AppLogger.debug('Loading patients...');
+
+// General information (logged to console + Crashlytics)
+AppLogger.info('User logged in successfully');
+
+// Warnings (non-fatal issues sent to Crashlytics)
+AppLogger.warning('API response slow', error, stackTrace);
+
+// Errors (recorded in Crashlytics)
+AppLogger.error('Failed to load data', error, stackTrace);
+
+// Fatal crashes (marked as critical in Crashlytics)
+AppLogger.fatal('Critical failure', error, stackTrace);
+```
+
+### With Context (Better Debugging)
+```dart
+AppLogger.error('Payment failed', error, stackTrace, {
+  'amount': 100.00,
+  'payment_method': 'credit_card',
+  'user_id': anonymizedUserId,
+});
+```
+
+### User Tracking
+```dart
+// On login
+AppLogger.setUserId(user.id);
+
+// On logout
+AppLogger.clearUserId();
+```
+
+### Breadcrumbs
+```dart
+AppLogger.recordBreadcrumb('User navigated to patient detail', {
+  'patient_id': patientId,
+  'from_screen': 'dashboard',
+});
+```
+
+---
+
+## 🛡️ Error Handling Features
+
+### Automatic Crash Capture
+
+**Flutter Framework Errors:**
+```dart
+FlutterError.onError = (errorDetails) {
+  AppLogger.fatal(
+    'Flutter Error',
+    errorDetails.exception,
+    errorDetails.stack ?? StackTrace.current,
+  );
+};
+```
+Catches: Widget build errors, render errors, state errors
+
+**Async Errors:**
+```dart
+PlatformDispatcher.instance.onError = (error, stack) {
+  AppLogger.fatal('Async Error', error, stack);
+  return true;
+};
+```
+Catches: Future errors, async/await errors, uncaught exceptions
+
+### Graceful Degradation
+
+All Crashlytics calls are wrapped in try-catch:
+```dart
+static void error(String message, [dynamic error, StackTrace? stackTrace]) {
+  _logger.e(message, error: error, stackTrace: stackTrace);
+  
+  if (_crashlyticsEnabled) {
+    try {
+      FirebaseCrashlytics.instance.log('ERROR: $message');
+      FirebaseCrashlytics.instance.recordError(error, stackTrace);
+    } catch (e) {
+      // Firebase not available, continue with console logging only
+      debug('Failed to log to Crashlytics: $e');
+    }
+  }
+}
+```
+
+---
+
+## ⚠️ HIPAA Compliance
+
+### ❌ Never Log:
+- Patient names, DOB, SSN
+- Medical record numbers
+- Diagnostic information
+- Treatment details
+- Any PHI (Protected Health Information)
+
+### ✅ Safe to Log:
+- Anonymized/hashed user IDs
+- Error messages (without patient context)
+- App version, device info
+- Performance metrics
+- Navigation breadcrumbs
+
+### Example:
+```dart
+// ❌ BAD
+AppLogger.info('Patient John Doe logged in');
+AppLogger.error('Failed to load records for patient 12345');
+
+// ✅ GOOD
+AppLogger.info('User logged in', {'user_id': hashUserId(user.id)});
+AppLogger.error('Failed to load records', error, stackTrace, {
+  'record_count': recordCount,
+  'retry_attempt': retryCount,
+});
+```
+
+---
+
+## 📚 Documentation
+
+- **Setup Guide**: `LOGGING_SETUP.md` - Complete Firebase configuration
+- **Code Examples**: `LOGGING_EXAMPLES.md` - Real-world usage patterns
+- **Feature Overview**: `LOGGING_COMPLETE.md` - Full capability summary
+- **This Document**: `FIREBASE_ENABLED.md` - Current status
+
+---
+
+## ✅ Pre-Launch Checklist
+
+- [x] Firebase Core integrated
+- [x] Crashlytics error handlers configured
+- [x] AppLogger defensive programming implemented
+- [x] HIPAA compliance patterns documented
+- [x] No compilation errors
+- [x] No runtime errors
+- [ ] Firebase project created (optional)
+- [ ] FlutterFire CLI configured (optional)
+- [ ] Production crash reporting tested (optional)
+
+---
+
+## 🎯 Current Status Summary
+
+| Component | Status | Notes |
+|-----------|--------|-------|
+| **Logger** | ✅ Ready | Console logging works perfectly |
+| **Firebase Core** | ✅ Integrated | Using placeholder config |
+| **Crashlytics** | ⚠️ Pending Config | Will activate after `flutterfire configure` |
+| **Error Handlers** | ✅ Active | Catching all Flutter/async errors |
+| **AppLogger** | ✅ Production Ready | Defensive, won't crash if Firebase unavailable |
+| **HIPAA Compliance** | ✅ Documented | Safe logging patterns provided |
+| **Compilation** | ✅ No Errors | Ready to run |
+
+---
+
+## Development Guidelines
+
+### AI Development Guidelines for Flutter in Firebase Studio
+
+These guidelines define the operational principles and capabilities of an AI agent interacting with Flutter projects within the Firebase Studio environment.
+
+#### Environment & Context Awareness
+
+The AI operates within the Firebase Studio development environment, providing a Code OSS-based IDE with deep integration for Flutter and Firebase services.
+
+- **Project Structure:** Assumes a standard Flutter project structure with `lib/main.dart` as entry point.
+- **dev.nix Configuration:** Defines system tools, IDE extensions, environment variables, and startup commands.
+- **Preview Server:** Provides running preview server with hot reload capabilities.
+
+#### Code Modification & Dependency Management
+
+The AI modifies Flutter codebase and manages dependencies autonomously.
+
+- **Core Code Assumption:** Focuses on modifying Dart code in `lib/main.dart` and related files.
+- **Package Management:** Adds dependencies via `flutter pub add` for regular packages, `flutter pub add dev:` for dev dependencies.
+- **Code Generation:** Uses `build_runner` for code generation when needed.
+- **Code Quality:** Adheres to Flutter/Dart best practices, clean code, meaningful naming, effective state management.
+
+#### Automated Error Detection & Remediation
+
+Continuously monitors for and resolves errors to maintain a runnable application state.
+
+- **Post-Modification Checks:** Monitors IDE diagnostics, terminal output, and preview server for errors.
+- **Automatic Error Correction:** Fixes syntax errors, type mismatches, null-safety violations, import issues, linting violations.
+- **Problem Reporting:** Clearly reports unresolvable errors with explanations and suggestions.
+
+#### Material Design Specifics
+
+Implements comprehensive theme using Material Design 3 principles.
+
+- **Color Schemes:** Uses `ColorScheme.fromSeed` for harmonious palettes.
+- **Typography:** Uses `TextTheme` with custom fonts via `google_fonts`.
+- **Component Theming:** Customizes appearance of Material components.
+- **Dark/Light Mode:** Implements theme toggle with `ThemeMode` and state management.
+
+*(Note: Full guidelines available in `GEMINI.md`)*
+
+## Contributing
+
+We welcome contributions to MediChat Flutter! Here's how you can help:
+
+### Prerequisites
+
+- Flutter SDK (3.35.0+)
+- Dart SDK
+- Git
+- Android Studio or VS Code with Flutter extensions
+- Firebase CLI (for Firebase-related features)
+
+### Development Setup
+
+1. **Fork the repository** on GitHub
+2. **Clone your fork:**
+   ```bash
+   git clone https://github.com/your-username/medichat-flutter-forui.git
+   cd medichat-flutter-forui
+   ```
+
+3. **Set up the development environment:**
+   ```bash
+   flutter pub get
+   flutter run
+   ```
+
+4. **For Firebase features:**
+   ```bash
+   npm install -g firebase-tools
+   dart pub global activate flutterfire_cli
+   firebase login
+   flutterfire configure
+   ```
+
+### Code Style
+
+- Follow Flutter's [effective Dart](https://dart.dev/guides/language/effective-dart) guidelines
+- Use `flutter format` to format code
+- Run `flutter analyze` to check for issues
+- Write meaningful commit messages
+
+### Testing
+
+- Write unit tests for business logic
+- Write widget tests for UI components
+- Run tests with `flutter test`
+- Ensure all tests pass before submitting PR
+
+### Pull Request Process
+
+1. **Create a feature branch:**
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+
+2. **Make your changes** and test thoroughly
+3. **Run the linter and tests:**
+   ```bash
+   flutter analyze
+   flutter test
+   ```
+
+4. **Commit your changes:**
+   ```bash
+   git commit -m "Add: brief description of changes"
+   ```
+
+5. **Push to your fork:**
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+
+6. **Create a Pull Request** on GitHub with:
+   - Clear description of changes
+   - Screenshots for UI changes
+   - Reference to any related issues
+
+### Reporting Issues
+
+- Use GitHub Issues to report bugs
+- Include steps to reproduce, expected vs actual behavior
+- Add screenshots/logs when possible
+- Check existing issues first
+
+### Code of Conduct
+
+Please be respectful and constructive in all interactions. We follow a code of conduct to ensure a positive community.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- Built with [Flutter](https://flutter.dev/)
+- UI components from [Forui](https://forui.dev/)
+- Logging with [Logger](https://pub.dev/packages/logger) and [Firebase Crashlytics](https://firebase.google.com/products/crashlytics)
+- Icons from [Forui Icons](https://forui.dev/icons)
+
+---
+
+For more detailed information, refer to the individual markdown files in the repository.

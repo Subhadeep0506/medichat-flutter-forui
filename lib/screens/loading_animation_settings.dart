@@ -120,8 +120,8 @@ class _LoadingAnimationSettingsScreenState
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    theme.colorScheme.surfaceVariant.withValues(alpha: 0.3),
-                    theme.colorScheme.surfaceVariant.withValues(alpha: 0.1),
+                    theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                    theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.1),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(16),
@@ -333,7 +333,7 @@ class _LoadingAnimationSettingsScreenState
                 : null,
             color: isSelected
                 ? null
-                : theme.colorScheme.surfaceVariant.withValues(alpha: 0.3),
+                : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isSelected
@@ -394,74 +394,78 @@ class _LoadingAnimationSettingsScreenState
       context: context,
       builder: (ctx, style, animation) {
         final ftheme = FTheme.of(ctx);
-        return FDialog(
-          style: style,
-          animation: animation,
-          direction: Axis.horizontal,
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: ftheme.colors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  FIcons.palette,
-                  color: ftheme.colors.primary,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Choose Color',
-                  style: ftheme.typography.lg.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: ftheme.colors.foreground,
+        final maxHeight = MediaQuery.of(context).size.height * 0.7;
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: FDialog(
+            style: style.call,
+            animation: animation,
+            direction: Axis.horizontal,
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: ftheme.colors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    FIcons.palette,
+                    color: ftheme.colors.primary,
+                    size: 24,
                   ),
                 ),
-              ),
-              FButton.icon(
-                style: FButtonStyle.ghost(),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Choose Color',
+                    style: ftheme.typography.lg.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: ftheme.colors.foreground,
+                    ),
+                  ),
+                ),
+                FButton.icon(
+                  style: FButtonStyle.ghost(),
+                  onPress: () => Navigator.of(ctx).pop(),
+                  child: const Icon(FIcons.x),
+                ),
+              ],
+            ),
+            body: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: predefinedColors.map((color) {
+                return GestureDetector(
+                  onTap: () {
+                    provider.updateCustomColor(color.value);
+                    Navigator.of(ctx).pop();
+                  },
+                  child: Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: ftheme.colors.border.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: color.value == provider.customColorValue
+                        ? const Icon(Icons.check, color: Colors.white)
+                        : null,
+                  ),
+                );
+              }).toList(),
+            ),
+            actions: [
+              FButton(
+                style: FButtonStyle.outline(),
                 onPress: () => Navigator.of(ctx).pop(),
-                child: const Icon(FIcons.x),
+                child: const Text('Cancel'),
               ),
             ],
           ),
-          body: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: predefinedColors.map((color) {
-              return GestureDetector(
-                onTap: () {
-                  provider.updateCustomColor(color.value);
-                  Navigator.of(ctx).pop();
-                },
-                child: Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: ftheme.colors.border.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: color.value == provider.customColorValue
-                      ? const Icon(Icons.check, color: Colors.white)
-                      : null,
-                ),
-              );
-            }).toList(),
-          ),
-          actions: [
-            FButton(
-              style: FButtonStyle.outline(),
-              onPress: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel'),
-            ),
-          ],
         );
       },
     );
@@ -473,59 +477,63 @@ class _LoadingAnimationSettingsScreenState
       context: context,
       builder: (ctx, style, animation) {
         final ftheme = FTheme.of(ctx);
-        return FDialog(
-          style: style,
-          animation: animation,
-          direction: Axis.horizontal,
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: ftheme.colors.destructive.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  FIcons.shieldAlert,
-                  color: ftheme.colors.destructive,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Reset Settings',
-                  style: ftheme.typography.lg.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: ftheme.colors.foreground,
+        final maxHeight = MediaQuery.of(context).size.height * 0.7;
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: FDialog(
+            style: style.call,
+            animation: animation,
+            direction: Axis.horizontal,
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: ftheme.colors.destructive.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    FIcons.shieldAlert,
+                    color: ftheme.colors.destructive,
+                    size: 24,
                   ),
                 ),
-              ),
-              FButton.icon(
-                style: FButtonStyle.ghost(),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Reset Settings',
+                    style: ftheme.typography.lg.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: ftheme.colors.foreground,
+                    ),
+                  ),
+                ),
+                FButton.icon(
+                  style: FButtonStyle.ghost(),
+                  onPress: () => Navigator.of(ctx).pop(),
+                  child: const Icon(FIcons.x),
+                ),
+              ],
+            ),
+            body: const Text(
+              'Are you sure you want to reset all loading animation settings to defaults?',
+            ),
+            actions: [
+              FButton(
+                style: FButtonStyle.outline(),
                 onPress: () => Navigator.of(ctx).pop(),
-                child: const Icon(FIcons.x),
+                child: const Text('Cancel'),
+              ),
+              FButton(
+                style: FButtonStyle.destructive(),
+                onPress: () {
+                  context.read<LoadingAnimationProvider>().resetToDefaults();
+                  Navigator.of(ctx).pop();
+                },
+                child: const Text('Reset'),
               ),
             ],
           ),
-          body: const Text(
-            'Are you sure you want to reset all loading animation settings to defaults?',
-          ),
-          actions: [
-            FButton(
-              style: FButtonStyle.outline(),
-              onPress: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel'),
-            ),
-            FButton(
-              style: FButtonStyle.destructive(),
-              onPress: () {
-                context.read<LoadingAnimationProvider>().resetToDefaults();
-                Navigator.of(ctx).pop();
-              },
-              child: const Text('Reset'),
-            ),
-          ],
         );
       },
     );

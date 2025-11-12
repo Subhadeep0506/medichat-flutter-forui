@@ -9,6 +9,7 @@
     pkgs.unzip
     pkgs.htop
     pkgs.sudo
+    pkgs.bun
   ];
   # Sets environment variables in the workspace
   env = {};

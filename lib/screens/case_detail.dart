@@ -42,75 +42,79 @@ class _CaseDetailScreenState extends State<CaseDetailScreen>
       context: context,
       builder: (ctx, style, animation) {
         final ftheme = FTheme.of(ctx);
-        return FDialog(
-          style: style,
-          animation: animation,
-          direction: Axis.horizontal,
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: ftheme.colors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  FIcons.messageSquareText,
-                  color: ftheme.colors.primary,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'New Chat Session',
-                  style: ftheme.typography.lg.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: ftheme.colors.foreground,
+        final maxHeight = MediaQuery.of(context).size.height * 0.7;
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: FDialog(
+            style: style.call,
+            animation: animation,
+            direction: Axis.horizontal,
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: ftheme.colors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    FIcons.messageSquareText,
+                    color: ftheme.colors.primary,
+                    size: 24,
                   ),
                 ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'New Chat Session',
+                    style: ftheme.typography.lg.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: ftheme.colors.foreground,
+                    ),
+                  ),
+                ),
+                FButton.icon(
+                  style: FButtonStyle.ghost(),
+                  onPress: () => Navigator.pop(ctx),
+                  child: const Icon(FIcons.x),
+                ),
+              ],
+            ),
+            body: TextField(
+              controller: titleCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Session Title (optional)',
               ),
-              FButton.icon(
-                style: FButtonStyle.ghost(),
+            ),
+            actions: [
+              FButton(
+                style: FButtonStyle.outline(),
                 onPress: () => Navigator.pop(ctx),
-                child: const Icon(FIcons.x),
+                child: const Text('Cancel'),
+              ),
+              FButton(
+                onPress: () async {
+                  final session = await handleTokenExpiration(() async {
+                    return await context.read<SessionProvider>().create(
+                      widget.caseId,
+                      title: titleCtrl.text.trim().isEmpty
+                          ? null
+                          : titleCtrl.text.trim(),
+                      patientId: widget.patientId,
+                    );
+                  });
+                  if (context.mounted && session != null) {
+                    Navigator.pop(ctx);
+                    // Navigate directly to the new session
+                    context.go(
+                      '/patients/${widget.patientId}/cases/${widget.caseId}/sessions/${session.id}',
+                    );
+                  }
+                },
+                child: const Text('Start Chat'),
               ),
             ],
           ),
-          body: TextField(
-            controller: titleCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Session Title (optional)',
-            ),
-          ),
-          actions: [
-            FButton(
-              style: FButtonStyle.outline(),
-              onPress: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            FButton(
-              onPress: () async {
-                final session = await handleTokenExpiration(() async {
-                  return await context.read<SessionProvider>().create(
-                    widget.caseId,
-                    title: titleCtrl.text.trim().isEmpty
-                        ? null
-                        : titleCtrl.text.trim(),
-                    patientId: widget.patientId,
-                  );
-                });
-                if (context.mounted && session != null) {
-                  Navigator.pop(ctx);
-                  // Navigate directly to the new session
-                  context.go(
-                    '/patients/${widget.patientId}/cases/${widget.caseId}/sessions/${session.id}',
-                  );
-                }
-              },
-              child: const Text('Start Chat'),
-            ),
-          ],
         );
       },
     );

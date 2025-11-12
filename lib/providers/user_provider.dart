@@ -39,7 +39,7 @@ class UserProvider with ChangeNotifier {
       if (e is TokenExpiredException) {
         ToastService.showError('Session expired. Please log in again.');
         // The auth provider should handle the logout
-        throw e; // Re-throw to let the caller handle logout
+        rethrow; // Re-throw to let the caller handle logout
       } else {
         ToastService.showError('Failed to fetch profile: ${e.toString()}');
       }
@@ -82,10 +82,10 @@ class UserProvider with ChangeNotifier {
 
       // Check if it's a token expiration error
       if (e is TokenExpiredException) {
-        throw e; // Re-throw to let the caller handle logout
+        rethrow; // Re-throw to let the caller handle logout
       } else {
         // Error handled by ApiErrorHandler
-        throw e; // Re-throw to let the caller handle error display
+        rethrow; // Re-throw to let the caller handle error display
       }
     } finally {
       _setLoading(false);

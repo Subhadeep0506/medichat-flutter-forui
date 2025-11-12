@@ -10,6 +10,11 @@ class ChatMessage {
   final int? safetyScore; // AI safety score (10-100) if available
   final String? safetyJustification; // Explanation of score
   final String? safetyLevel; // Low / Medium / High etc.
+  final bool? liked; // null = no reaction, true = liked, false = disliked
+  final bool
+  hasFeedback; // Whether feedback has been submitted for this message
+  final String? feedback; // User feedback text
+  final int? feedbackStars; // User rating 1-5 stars
 
   const ChatMessage({
     required this.id,
@@ -21,6 +26,10 @@ class ChatMessage {
     this.safetyScore,
     this.safetyJustification,
     this.safetyLevel,
+    this.liked,
+    this.hasFeedback = false,
+    this.feedback,
+    this.feedbackStars,
   });
 
   ChatMessage copyWith({
@@ -29,6 +38,10 @@ class ChatMessage {
     int? safetyScore,
     String? safetyJustification,
     String? safetyLevel,
+    bool? liked,
+    bool? hasFeedback,
+    String? feedback,
+    int? feedbackStars,
   }) => ChatMessage(
     id: id,
     sessionId: sessionId,
@@ -39,6 +52,10 @@ class ChatMessage {
     safetyScore: safetyScore ?? this.safetyScore,
     safetyJustification: safetyJustification ?? this.safetyJustification,
     safetyLevel: safetyLevel ?? this.safetyLevel,
+    liked: liked ?? this.liked,
+    hasFeedback: hasFeedback ?? this.hasFeedback,
+    feedback: feedback ?? this.feedback,
+    feedbackStars: feedbackStars ?? this.feedbackStars,
   );
 
   factory ChatMessage.fromHistoryJson(Map<String, dynamic> json) {
@@ -103,10 +120,14 @@ class ChatMessage {
       sessionId: json['session_id']?.toString() ?? '',
       role: role,
       content: text,
-      timestamp: DateTime.now(),
+      timestamp: _parseTimestamp(json['timestamp']),
       safetyScore: _extractSafetyScore(json['safety']),
       safetyJustification: _extractSafetyJustification(json['safety']),
       safetyLevel: _extractSafetyLevel(json['safety']),
+      liked: _convertLikeStatus(json['like']),
+      hasFeedback: _hasValidFeedback(json['feedback'], json['stars']),
+      feedback: json['feedback'] as String?,
+      feedbackStars: _convertStars(json['stars']),
     );
   }
 
@@ -121,6 +142,10 @@ class ChatMessage {
     safetyScore: json['safetyScore'] as int?,
     safetyJustification: json['safetyJustification'] as String?,
     safetyLevel: json['safetyLevel'] as String?,
+    liked: json['liked'] as bool?,
+    hasFeedback: json['hasFeedback'] as bool? ?? false,
+    feedback: json['feedback'] as String?,
+    feedbackStars: json['feedbackStars'] as int?,
   );
 
   Map<String, dynamic> toJson() => {
@@ -132,6 +157,11 @@ class ChatMessage {
     'pending': pending,
     if (safetyScore != null) 'safetyScore': safetyScore,
     if (safetyJustification != null) 'safetyJustification': safetyJustification,
+    if (safetyLevel != null) 'safetyLevel': safetyLevel,
+    if (liked != null) 'liked': liked,
+    'hasFeedback': hasFeedback,
+    if (feedback != null) 'feedback': feedback,
+    if (feedbackStars != null) 'feedbackStars': feedbackStars,
     if (safetyLevel != null) 'safetyLevel': safetyLevel,
   };
 }
@@ -158,6 +188,57 @@ String? _extractSafetyLevel(dynamic safety) {
   }
   if (safety is Map && safety['level'] is String) {
     return safety['level'] as String; // fallback alternate key
+  }
+  return null;
+}
+
+DateTime _parseTimestamp(dynamic t) {
+  if (t == null) return DateTime.now();
+  if (t is String) {
+    final parsed = DateTime.tryParse(t);
+    if (parsed != null) return parsed;
+    // Try common formats like 'yyyy-MM-dd HH:mm:ss.SSS'
+    try {
+      return DateTime.parse(t.replaceFirst(' ', 'T'));
+    } catch (e) {
+      return DateTime.now();
+    }
+  }
+  if (t is int) {
+    // assume epoch millis
+    return DateTime.fromMillisecondsSinceEpoch(t);
+  }
+  return DateTime.now();
+}
+
+/// Convert backend 'like' field to boolean representation
+/// Backend: "like" -> true, "dislike" -> false, null -> null
+bool? _convertLikeStatus(dynamic likeValue) {
+  if (likeValue == null) return null;
+  final likeStr = likeValue.toString().toLowerCase();
+  if (likeStr == 'like') return true;
+  if (likeStr == 'dislike') return false;
+  return null;
+}
+
+/// Check if message has valid feedback (non-empty feedback or rating > 0)
+bool _hasValidFeedback(dynamic feedback, dynamic stars) {
+  final feedbackText = feedback?.toString().trim();
+  final starRating = _convertStars(stars);
+  return (feedbackText != null && feedbackText.isNotEmpty) ||
+      (starRating != null && starRating > 0);
+}
+
+/// Convert backend 'stars' field to nullable int
+/// Backend: 0 or null -> null, positive number -> the number
+int? _convertStars(dynamic stars) {
+  if (stars == null) return null;
+  if (stars is int) {
+    return stars > 0 ? stars : null;
+  }
+  if (stars is String) {
+    final parsed = int.tryParse(stars);
+    return (parsed != null && parsed > 0) ? parsed : null;
   }
   return null;
 }

@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:forui/forui.dart';
-import 'ui/app_text_field.dart';
-import 'ui/app_button.dart';
 import '../providers/auth_provider.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/user_provider.dart';
@@ -71,119 +69,123 @@ class _ProfileTabContentState extends State<ProfileTabContent> {
       context: context,
       builder: (ctx, style, animation) {
         final ftheme = FTheme.of(ctx);
-        return FDialog(
-          style: style.call,
-          animation: animation,
-          direction: Axis.horizontal,
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: ftheme.colors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: ftheme.colors.primary, size: 24),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: ftheme.typography.lg.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: ftheme.colors.foreground,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      description,
-                      style: ftheme.typography.base.copyWith(
-                        color: ftheme.colors.mutedForeground,
-                      ),
-                      maxLines: 2,
-                      softWrap: true,
-                    ),
-                  ],
-                ),
-              ),
-              FButton.icon(
-                style: FButtonStyle.ghost(),
-                onPress: () => Navigator.of(ctx).pop(),
-                child: const Icon(FIcons.x),
-              ),
-            ],
-          ),
-          body: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (currentValue != null && currentValue.isNotEmpty)
+        final maxHeight = MediaQuery.of(context).size.height * 0.7;
+        return ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: maxHeight),
+          child: FDialog(
+            style: style.call,
+            animation: animation,
+            direction: Axis.horizontal,
+            title: Row(
+              children: [
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: ftheme.colors.background.withValues(alpha: 0.3),
+                    color: ftheme.colors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: ftheme.colors.border.withValues(alpha: 0.2),
-                    ),
                   ),
-                  child: Row(
+                  child: Icon(icon, color: ftheme.colors.primary, size: 24),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        FIcons.info,
-                        color: ftheme.colors.primary.withValues(alpha: 0.7),
-                        size: 16,
-                      ),
-                      const SizedBox(width: 8),
                       Text(
-                        'Current: $currentValue',
+                        title,
+                        style: ftheme.typography.lg.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: ftheme.colors.foreground,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        description,
                         style: ftheme.typography.base.copyWith(
                           color: ftheme.colors.mutedForeground,
-                          fontSize: 12,
                         ),
-                        softWrap: true,
                         maxLines: 2,
+                        softWrap: true,
                       ),
                     ],
                   ),
                 ),
-              const SizedBox(height: 12),
-              AppTextField(
-                controller: controller,
-                hintText: hintText,
-                label: Text(title.replaceAll('Edit ', '')),
-                keyboardType: field == 'email'
-                    ? TextInputType.emailAddress
-                    : field == 'phone'
-                    ? TextInputType.phone
-                    : TextInputType.text,
-                prefixIcon: Icon(
-                  icon,
-                  color: ftheme.colors.primary.withValues(alpha: 0.7),
+                FButton.icon(
+                  style: FButtonStyle.ghost(),
+                  onPress: () => Navigator.of(ctx).pop(),
+                  child: const Icon(FIcons.x),
                 ),
+              ],
+            ),
+            body: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (currentValue != null && currentValue.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: ftheme.colors.background.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: ftheme.colors.border.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          FIcons.info,
+                          color: ftheme.colors.primary.withValues(alpha: 0.7),
+                          size: 16,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Current: $currentValue',
+                          style: ftheme.typography.base.copyWith(
+                            color: ftheme.colors.mutedForeground,
+                            fontSize: 12,
+                          ),
+                          softWrap: true,
+                          maxLines: 2,
+                        ),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 12),
+                AppTextField(
+                  controller: controller,
+                  hintText: hintText,
+                  label: Text(title.replaceAll('Edit ', '')),
+                  keyboardType: field == 'email'
+                      ? TextInputType.emailAddress
+                      : field == 'phone'
+                      ? TextInputType.phone
+                      : TextInputType.text,
+                  prefixIcon: Icon(
+                    icon,
+                    color: ftheme.colors.primary.withValues(alpha: 0.7),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              AppButton(
+                label: 'Cancel',
+                onPressed: () => Navigator.of(ctx).pop(),
+                style: FButtonStyle.ghost(),
+              ),
+              _SaveButton(
+                controller: controller,
+                currentValue: currentValue,
+                field: field,
+                userProvider: userProvider,
+                onSaveComplete: () async {
+                  Navigator.of(ctx).pop();
+                  await _loadProfile();
+                },
               ),
             ],
           ),
-          actions: [
-            AppButton(
-              label: 'Cancel',
-              onPressed: () => Navigator.of(ctx).pop(),
-              style: FButtonStyle.ghost(),
-            ),
-            _SaveButton(
-              controller: controller,
-              currentValue: currentValue,
-              field: field,
-              userProvider: userProvider,
-              onSaveComplete: () async {
-                Navigator.of(ctx).pop();
-                await _loadProfile();
-              },
-            ),
-          ],
         );
       },
     );

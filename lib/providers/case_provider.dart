@@ -89,7 +89,7 @@ class CaseProvider with ChangeNotifier {
       ];
       _casesByPatient[patientId] = list; // now correctly typed
       notifyListeners();
-      ToastService.showSuccess('Case "${title}" created successfully!');
+      ToastService.showSuccess('Case "$title" created successfully!');
       return mc;
     } catch (e) {
       _error = e.toString();

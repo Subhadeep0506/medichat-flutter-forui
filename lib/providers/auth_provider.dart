@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 import '../services/api_service.dart';
 import '../services/remote_api_service.dart';
 import '../services/toast_service.dart';
+import '../utils/app_logger.dart';
 
 /// Helper function to extract user-friendly error message from exception
 String _extractErrorMessage(dynamic error) {
@@ -140,8 +141,10 @@ class AuthProvider with ChangeNotifier {
   /// Returns true if refresh was successful, false otherwise
   /// This method is designed to work silently without showing toast notifications
   Future<bool> relogin({bool showToasts = false}) async {
+    AppLogger.debug('AuthProvider: relogin() called');
     if (_user?.refreshToken == null) {
       _error = 'No refresh token available';
+      AppLogger.debug('AuthProvider: No refresh token available');
       if (showToasts) {
         ToastService.showError('Cannot relogin: No refresh token available');
       }
@@ -153,7 +156,10 @@ class AuthProvider with ChangeNotifier {
 
     try {
       if (useRemote && _remote != null) {
+        AppLogger.debug('AuthProvider: Calling remote relogin endpoint...');
+
         final reloggedUser = await _remote!.relogin(_user!.refreshToken!);
+
         // Update the existing user with new tokens while preserving user data
         _user = AppUser(
           id: _user!.id,
@@ -165,7 +171,10 @@ class AuthProvider with ChangeNotifier {
           role: _user!.role,
           createdAt: _user!.createdAt,
         );
+        // Notify listeners immediately so token provider gets updated value
+        notifyListeners();
         await _persistUser();
+        
         if (showToasts) {
           ToastService.showSuccess('Session refreshed successfully');
         }
@@ -182,6 +191,7 @@ class AuthProvider with ChangeNotifier {
     } catch (e) {
       final errorMessage = _extractErrorMessage(e);
       _error = errorMessage;
+      AppLogger.debug('AuthProvider: Relogin failed: $errorMessage');
       if (showToasts) {
         ToastService.showError('Failed to refresh session: $errorMessage');
       }
@@ -212,7 +222,7 @@ class AuthProvider with ChangeNotifier {
     } catch (e) {
       // swallow errors in restore path
       if (kDebugMode) {
-        print('Failed to restore user: $e');
+        AppLogger.error('Failed to restore user: $e');
       }
     }
     notifyListeners();
@@ -240,7 +250,7 @@ class AuthProvider with ChangeNotifier {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Error clearing expired session: $e');
+        AppLogger.error('Error clearing expired session: $e');
       }
     }
     notifyListeners();

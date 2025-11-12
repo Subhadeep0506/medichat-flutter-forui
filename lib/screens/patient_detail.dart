@@ -178,10 +178,16 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
     dynamic medicalCase,
     CaseProvider caseProvider,
   ) async {
+    final maxHeight = MediaQuery.of(context).size.height * 0.7;
     final result = await showFDialog<bool>(
       context: context,
-      builder: (ctx, style, animation) =>
-          EditCaseDialog(medicalCase: medicalCase, caseProvider: caseProvider),
+      builder: (ctx, style, animation) => ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxHeight),
+        child: EditCaseDialog(
+          medicalCase: medicalCase,
+          caseProvider: caseProvider,
+        ),
+      ),
     );
 
     // Refresh the list if the case was updated

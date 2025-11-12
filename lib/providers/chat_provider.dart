@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/message.dart';
 import '../services/api_service.dart';
 import '../services/remote_api_service.dart';
+import '../utils/app_logger.dart';
 
 class ChatProvider with ChangeNotifier {
   final ChatApiService _api; // mock
@@ -24,7 +25,7 @@ class ChatProvider with ChangeNotifier {
   String? _error;
 
   List<ChatMessage> messagesFor(String sessionId) =>
-      List.unmodifiable(_messagesBySession[sessionId] ?? []);
+      List.from(_messagesBySession[sessionId] ?? []);
   bool isLoading(String sessionId) => _loadingBySession[sessionId] == true;
   bool isSending(String sessionId) => _sendingBySession[sessionId] == true;
   String? get error => _error;
@@ -122,11 +123,8 @@ class ChatProvider with ChangeNotifier {
         );
         // Debug log safety metadata
         // ignore: avoid_print
-        print(
-          '[ChatProvider] Received remote response safety: score=' +
-              (remoteResp.safetyScore?.toString() ?? 'null') +
-              ', level=' +
-              (remoteResp.safetyLevel ?? 'null'),
+        AppLogger.debug(
+          '[ChatProvider] Received remote response safety: score=${remoteResp.safetyScore?.toString() ?? 'null'}, level=${remoteResp.safetyLevel ?? 'null'}',
         );
         aiMsg = ChatMessage(
           id: 'ai-${DateTime.now().millisecondsSinceEpoch}',
@@ -144,6 +142,7 @@ class ChatProvider with ChangeNotifier {
       _messagesBySession[sessionId] =
           _messagesBySession[sessionId]!.where((m) => !m.pending).toList()
             ..add(aiMsg);
+      notifyListeners();
       unawaited(_persist(sessionId));
     } catch (e) {
       // Re-throw token expiration exceptions so they can be handled by UI
@@ -179,5 +178,160 @@ class ChatProvider with ChangeNotifier {
     final list = _messagesBySession[sessionId] ?? [];
     final jsonList = list.map((m) => m.toJson()).toList();
     await prefs.setString(cacheKey, jsonEncode(jsonList));
+  }
+
+  /// Like or unlike a message
+  /// [messageId] - The ID of the message
+  /// [action] - 'like' to like the message, 'unlike' to remove like
+  Future<void> likeMessage(String messageId, String action) async {
+    if (!useRemote || _remote == null) {
+      AppLogger.debug(
+        'ChatProvider: Remote service not available for like action',
+      );
+      return;
+    }
+
+    // Determine the new liked state based on action
+    bool? liked;
+    switch (action) {
+      case 'like':
+        liked = true;
+        break;
+      case 'dislike':
+        liked = false;
+        break;
+      case 'unlike':
+        liked = null;
+        break;
+      default:
+        liked = null;
+    }
+
+    // Store the original state for rollback if API call fails
+    ChatMessage? originalMessage;
+    for (final sessionId in _messagesBySession.keys) {
+      final messages = _messagesBySession[sessionId];
+      if (messages != null) {
+        final index = messages.indexWhere((m) => m.id == messageId);
+        if (index != -1) {
+          originalMessage = messages[index];
+          break;
+        }
+      }
+    }
+
+    // Optimistic update: Update local state immediately
+    _updateMessageInAllSessions(messageId, (msg) => msg.copyWith(liked: liked));
+    notifyListeners();
+
+    try {
+      // Make API call
+      await _remote!.likeMessage(messageId, action);
+
+      // Persist changes after successful API call
+      for (final sessionId in _messagesBySession.keys) {
+        final hasMessage =
+            _messagesBySession[sessionId]?.any((m) => m.id == messageId) ??
+            false;
+        if (hasMessage) {
+          unawaited(_persist(sessionId));
+          break;
+        }
+      }
+    } catch (e) {
+      AppLogger.error('ChatProvider: Failed to like message: $e');
+
+      // Rollback: Restore original state if API call failed
+      if (originalMessage != null) {
+        _updateMessageInAllSessions(messageId, (msg) => originalMessage!);
+        notifyListeners();
+      }
+
+      _error = 'Failed to update like status';
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  /// Submit feedback for a message
+  Future<void> submitFeedback(
+    String messageId, {
+    String? feedback,
+    int? stars,
+  }) async {
+    if (!useRemote || _remote == null) {
+      AppLogger.debug(
+        'ChatProvider: Remote service not available for feedback action',
+      );
+      return;
+    }
+
+    // Store the original state for rollback if API call fails
+    ChatMessage? originalMessage;
+    for (final sessionId in _messagesBySession.keys) {
+      final messages = _messagesBySession[sessionId];
+      if (messages != null) {
+        final index = messages.indexWhere((m) => m.id == messageId);
+        if (index != -1) {
+          originalMessage = messages[index];
+          break;
+        }
+      }
+    }
+
+    // Optimistic update: Update local state immediately
+    _updateMessageInAllSessions(
+      messageId,
+      (msg) => msg.copyWith(
+        hasFeedback: true,
+        feedback: feedback,
+        feedbackStars: stars,
+      ),
+    );
+    notifyListeners();
+
+    try {
+      // Make API call
+      await _remote!.editFeedback(messageId, feedback: feedback, stars: stars);
+
+      // Persist changes after successful API call
+      for (final sessionId in _messagesBySession.keys) {
+        final hasMessage =
+            _messagesBySession[sessionId]?.any((m) => m.id == messageId) ??
+            false;
+        if (hasMessage) {
+          unawaited(_persist(sessionId));
+          break;
+        }
+      }
+    } catch (e) {
+      AppLogger.error('ChatProvider: Failed to submit feedback: $e');
+
+      // Rollback: Restore original state if API call failed
+      if (originalMessage != null) {
+        _updateMessageInAllSessions(messageId, (msg) => originalMessage!);
+        notifyListeners();
+      }
+
+      _error = 'Failed to submit feedback';
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  /// Helper method to update a message across all sessions
+  void _updateMessageInAllSessions(
+    String messageId,
+    ChatMessage Function(ChatMessage) updater,
+  ) {
+    for (final sessionId in _messagesBySession.keys) {
+      final messages = _messagesBySession[sessionId];
+      if (messages != null) {
+        final index = messages.indexWhere((m) => m.id == messageId);
+        if (index != -1) {
+          _messagesBySession[sessionId]![index] = updater(messages[index]);
+        }
+      }
+    }
   }
 }

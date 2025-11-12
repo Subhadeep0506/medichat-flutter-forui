@@ -8,6 +8,7 @@ import '../utils/token_expiration_handler.dart';
 import '../widgets/ui/app_text_field.dart';
 import '../widgets/ui/app_button.dart';
 import '../widgets/ui/app_select.dart';
+import '../utils/app_logger.dart';
 
 class EditCaseDialog extends StatefulWidget {
   final MedicalCase medicalCase;
@@ -63,7 +64,7 @@ class _EditCaseDialogState extends State<EditCaseDialog>
 
     try {
       // Debug: Print tags before saving
-      print('Saving case with tags: $_tags');
+      AppLogger.debug('Saving case with tags: $_tags');
 
       final success = await handleTokenExpiration(() async {
         return await widget.caseProvider.update(

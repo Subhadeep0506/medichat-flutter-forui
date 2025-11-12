@@ -16,16 +16,8 @@ class AppConfig {
 
   // Backend URL configuration
   static String get backendBaseUrl {
-    // Always use the single remote production URL for all platforms and builds.
-    // Change this value if you need to point the app to a different remote host.
     const String productionUrl =
         'https://qwen-3-mental-health-chatbot-fastapi-subhadeepdouble-8rs5pd9z.leapcell.dev/api/v1';
-
-    if (enableDebugLogging) {
-      print(
-        'AppConfig: Using single remote URL for all builds: $productionUrl',
-      );
-    }
 
     return productionUrl;
   }

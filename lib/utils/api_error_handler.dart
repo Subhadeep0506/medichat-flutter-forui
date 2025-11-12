@@ -4,6 +4,7 @@ import '../providers/auth_provider.dart';
 import '../services/remote_api_service.dart';
 import '../services/toast_service.dart';
 import '../services/global_token_expiration_service.dart';
+import 'app_logger.dart';
 
 /// Global error handler for API calls that automatically handles token expiration
 class ApiErrorHandler {
@@ -29,17 +30,19 @@ class ApiErrorHandler {
 
         if (refreshSuccess) {
           // Token refresh successful, retry the original operation
-          debugPrint('Token refreshed successfully, retrying operation...');
+          AppLogger.debug(
+            'Token refreshed successfully, retrying operation...',
+          );
           try {
             return await apiCall();
           } catch (retryError) {
             // If the retry fails, re-throw the original error
-            debugPrint('Retry after token refresh failed: $retryError');
+            AppLogger.debug('Retry after token refresh failed: $retryError');
             rethrow;
           }
         } else {
           // Token refresh failed, operation cannot continue
-          debugPrint('Token refresh failed, operation aborted');
+          AppLogger.debug('Token refresh failed, operation aborted');
           rethrow;
         }
       }

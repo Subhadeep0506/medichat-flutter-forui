@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/chat_settings.dart';
+import '../utils/app_logger.dart';
 
 class ChatSettingsProvider with ChangeNotifier {
   static const String _storageKey = 'chat_settings';
@@ -25,7 +26,7 @@ class ChatSettingsProvider with ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      debugPrint('Error loading chat settings: $e');
+      AppLogger.error('Error loading chat settings: $e');
       // Use default settings if loading fails
     }
   }
@@ -40,7 +41,7 @@ class ChatSettingsProvider with ChangeNotifier {
       final json = jsonEncode(_settings.toJson());
       await prefs.setString(_storageKey, json);
     } catch (e) {
-      debugPrint('Error saving chat settings: $e');
+      AppLogger.error('Error saving chat settings: $e');
     }
   }
 

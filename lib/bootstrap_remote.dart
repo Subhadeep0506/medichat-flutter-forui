@@ -9,14 +9,15 @@ import 'providers/session_provider.dart';
 import 'providers/chat_provider.dart';
 import 'providers/user_provider.dart';
 import 'config/app_config.dart';
+import 'utils/app_logger.dart';
 
 void enableRemoteBackend(BuildContext context, {String? baseUrl}) {
   if (AppConfig.enableDebugLogging) {
-    print(
+    AppLogger.info(
       'Bootstrap: Enabling remote backend with base URL: ${baseUrl ?? AppConfig.backendBaseUrl}',
     );
     if (baseUrl != null) {
-      print(
+      AppLogger.warning(
         'Warning: baseUrl parameter is ignored. Update AppConfig.backendBaseUrl instead.',
       );
     }
@@ -35,7 +36,7 @@ void enableRemoteBackend(BuildContext context, {String? baseUrl}) {
     ),
   );
   if (AppConfig.enableDebugLogging) {
-    print('Bootstrap: PatientProvider remote enabled');
+    AppLogger.info('Bootstrap: PatientProvider remote enabled');
   }
 
   final cases = context.read<CaseProvider>();
@@ -75,6 +76,6 @@ void enableRemoteBackend(BuildContext context, {String? baseUrl}) {
   );
 
   if (AppConfig.enableDebugLogging) {
-    print('Bootstrap: All remote services enabled');
+    AppLogger.info('Bootstrap: All remote services enabled');
   }
 }

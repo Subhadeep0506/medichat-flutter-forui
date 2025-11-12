@@ -39,7 +39,7 @@ class AppButton extends StatelessWidget {
     // Prefer Forui's FButton which integrates with the app theme and
     // supports prefix content (icons/progress) and disabled/loading states.
     final prefixWidget = isLoading
-        ? AppLoadingWidget(size: 18, color: theme.colors.primaryForeground)
+        ? AppLoadingWidget(size: 12, color: theme.colors.primaryForeground)
         : leading;
 
     // Create text widget with custom styling if provided
@@ -67,16 +67,7 @@ class AppButton extends StatelessWidget {
         // Direct FButtonStyle instance
         baseStyle = style;
       } else {
-        // For function styles, we'll use a best-effort mapping to theme button styles
-        // This handles the common case where users pass FButtonStyle.primary(), etc.
-        // Since we can't easily resolve the functions, we map to the most appropriate style
-        // If style is null or unknown, default to primary
         baseStyle = theme.buttonStyles.primary; // Safe default
-
-        // Note: When padding is used with function styles like FButtonStyle.outline(),
-        // the button will use primary styling with custom padding. This is a limitation
-        // of trying to modify function-based styles. For full control over style + padding,
-        // users should pass a direct FButtonStyle instance.
       }
 
       // Create modified style with custom padding
@@ -88,7 +79,7 @@ class AppButton extends StatelessWidget {
         prefix: prefixWidget,
         onPress: isLoading ? null : onPressed,
         mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
-        style: customStyle,
+        style: customStyle.call,
         child: textWidget,
       );
 

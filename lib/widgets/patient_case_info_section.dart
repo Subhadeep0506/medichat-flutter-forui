@@ -47,13 +47,19 @@ class PatientCaseInfoSection extends StatelessWidget {
       child: Material(
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
-          onTap: () => showFDialog(
-            context: context,
-            builder: (ctx, style, animation) => PatientCaseDetailsPopover(
-              patient: currentPatient,
-              medicalCase: currentCase,
-            ),
-          ),
+          onTap: () {
+            final maxHeight = MediaQuery.of(context).size.height * 0.7;
+            showFDialog(
+              context: context,
+              builder: (ctx, style, animation) => ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: maxHeight),
+                child: PatientCaseDetailsPopover(
+                  patient: currentPatient,
+                  medicalCase: currentCase,
+                ),
+              ),
+            );
+          },
           child: FCard(
             title: Row(
               children: [

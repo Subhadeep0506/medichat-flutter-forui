@@ -110,7 +110,7 @@ class StyledRectButton extends StatelessWidget {
                       .withValues(alpha: 0.7)
                 : Theme.of(
                     context,
-                  ).colorScheme.surfaceVariant.withValues(alpha: 0.5),
+                  ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isActive

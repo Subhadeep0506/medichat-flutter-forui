@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/loading_animation_style.dart';
+import '../utils/app_logger.dart';
 
 /// Provider to manage global loading animation settings
 /// Handles style selection, color preferences, and persistence
@@ -60,7 +61,7 @@ class LoadingAnimationProvider extends ChangeNotifier {
       _initialized = true;
       notifyListeners();
     } catch (e) {
-      debugPrint('Error initializing LoadingAnimationProvider: $e');
+      AppLogger.error('Error initializing LoadingAnimationProvider: $e');
       _initialized = true;
     }
   }
@@ -76,7 +77,7 @@ class LoadingAnimationProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(_styleKey, style.index);
     } catch (e) {
-      debugPrint('Error saving loading animation style: $e');
+      AppLogger.error('Error saving loading animation style: $e');
     }
   }
 
@@ -91,7 +92,7 @@ class LoadingAnimationProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_useThemeColorKey, useThemeColor);
     } catch (e) {
-      debugPrint('Error saving loading animation color preference: $e');
+      AppLogger.error('Error saving loading animation color preference: $e');
     }
   }
 
@@ -108,7 +109,7 @@ class LoadingAnimationProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(_customColorKey, colorValue);
     } catch (e) {
-      debugPrint('Error saving loading animation custom color: $e');
+      AppLogger.error('Error saving loading animation custom color: $e');
     }
   }
 
@@ -125,7 +126,7 @@ class LoadingAnimationProvider extends ChangeNotifier {
       await prefs.remove(_useThemeColorKey);
       await prefs.remove(_customColorKey);
     } catch (e) {
-      debugPrint('Error resetting loading animation settings: $e');
+      AppLogger.error('Error resetting loading animation settings: $e');
     }
   }
 }

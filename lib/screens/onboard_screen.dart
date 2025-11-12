@@ -1,10 +1,10 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:forui/forui.dart';
 import '../widgets/ui/app_button.dart';
 import '../providers/onboarding_provider.dart';
+import '../utils/app_logger.dart';
 
 /// Redesigned onboarding experience based on provided markdown specification.
 /// Always shown on app start (router initialLocation set to /onboard).
@@ -33,7 +33,7 @@ class _OnboardScreenState extends State<OnboardScreen> {
         onboarding.markSeen();
       });
     } catch (e) {
-      debugPrint('Error in onboard navigation: $e');
+      AppLogger.error('Error in onboard navigation: $e');
     }
   }
 
@@ -51,7 +51,7 @@ class _OnboardScreenState extends State<OnboardScreen> {
                 const SizedBox(height: 8),
                 // Brand / Logo
                 Text(
-                  'Mindful Chat',
+                  'MediChat',
                   style: theme.typography.xl2.copyWith(
                     fontWeight: FontWeight.bold,
                     color: theme.colors.foreground,
@@ -60,7 +60,7 @@ class _OnboardScreenState extends State<OnboardScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "Let's get started on your journey to mindfulness.",
+                  "Your personal Mental Health Assistant. Private and Secure",
                   style: theme.typography.base.copyWith(
                     color: theme.colors.mutedForeground,
                   ),
@@ -130,7 +130,7 @@ class _OnboardScreenState extends State<OnboardScreen> {
         ),
       );
     } catch (e) {
-      debugPrint('Error building onboard screen: $e');
+      AppLogger.error('Error building onboard screen: $e');
       return const FScaffold(
         child: Center(child: Text('Error loading onboarding screen')),
       );
