@@ -242,6 +242,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   prefixIcon: const Icon(FIcons.lock),
                   obscureText: _obscurePassword,
                   suffixIcon: StyledIconButton(
+                    padding: EdgeInsetsGeometry.all(2),
+                    iconSize: 14,
                     icon: _obscurePassword ? FIcons.eye : FIcons.eyeClosed,
                     onPressed: () {
                       setState(() {
@@ -258,6 +260,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   prefixIcon: const Icon(FIcons.lock),
                   obscureText: _obscureConfirmPassword,
                   suffixIcon: StyledIconButton(
+                    padding: EdgeInsetsGeometry.all(2),
+                    iconSize: 14,
                     icon: _obscurePassword ? FIcons.eye : FIcons.eyeClosed,
                     onPressed: () {
                       setState(() {

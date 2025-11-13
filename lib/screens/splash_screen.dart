@@ -128,7 +128,6 @@ class _SplashScreenState extends State<SplashScreen>
                       fontSize: 42,
                       fontWeight: FontWeight.bold,
                       color: textColor,
-                      letterSpacing: 2,
                     ),
                   ),
                 );
@@ -148,7 +147,6 @@ class _SplashScreenState extends State<SplashScreen>
                     style: TextStyle(
                       fontSize: 16,
                       color: textColor.withValues(alpha: 0.7),
-                      letterSpacing: 0.5,
                     ),
                   ),
                 );
@@ -162,16 +160,12 @@ class _SplashScreenState extends State<SplashScreen>
               color: Theme.of(context).primaryColor,
               size: 50,
             ),
-
             const SizedBox(height: 24),
-
-            // Loading text
             Text(
               'Loading...',
               style: TextStyle(
                 fontSize: 14,
                 color: textColor.withValues(alpha: 0.5),
-                letterSpacing: 1,
               ),
             ),
 

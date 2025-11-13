@@ -260,6 +260,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   obscureText: _obscurePassword,
                   prefixIcon: const Icon(FIcons.lock),
                   suffixIcon: StyledIconButton(
+                    padding: EdgeInsetsGeometry.all(2),
+                    iconSize: 14,
                     icon: _obscurePassword ? FIcons.eye : FIcons.eyeClosed,
                     onPressed: () {
                       setState(() {
