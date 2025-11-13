@@ -21,10 +21,8 @@ import 'services/api_service.dart';
 import 'utils/app_logger.dart';
 
 void main() async {
-  // Ensure Flutter binding is initialized
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Set up error handlers for logging
   FlutterError.onError = (errorDetails) {
     AppLogger.error(
       'Flutter Error',

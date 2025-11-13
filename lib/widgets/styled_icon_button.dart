@@ -42,16 +42,20 @@ class StyledIconButton extends StatelessWidget {
         icon: AnimatedRotation(
           turns: isExpanded ? 0.5 : 0,
           duration: const Duration(milliseconds: 300),
-          child: Icon(
-            icon,
-            color: isExpanded
-                ? theme.colorScheme.primary
-                : theme.colorScheme.onSurfaceVariant,
+          child: Padding(
+            padding: padding,
+            child: Icon(
+              icon,
+              color: isExpanded
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurfaceVariant,
+              size: iconSize,
+            ),
           ),
         ),
         iconSize: iconSize,
-        padding: padding,
-        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(),
         tooltip: tooltip,
       ),
     );
@@ -275,16 +279,20 @@ class StyledRotatingIconButton extends StatelessWidget {
         icon: AnimatedRotation(
           turns: isExpanded ? 0.5 : 0,
           duration: const Duration(milliseconds: 300),
-          child: Icon(
-            icon,
-            color: isExpanded
-                ? theme.colorScheme.primary
-                : theme.colorScheme.onSurfaceVariant,
+          child: Padding(
+            padding: padding,
+            child: Icon(
+              icon,
+              color: isExpanded
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurfaceVariant,
+              size: iconSize,
+            ),
           ),
         ),
         iconSize: iconSize,
-        padding: padding,
-        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(),
         tooltip: tooltip,
       ),
     );
