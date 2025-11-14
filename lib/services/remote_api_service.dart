@@ -527,11 +527,13 @@ class RemoteChatResponse {
   final int? safetyScore;
   final String? safetyJustification;
   final String? safetyLevel;
+  final String? messageId;
   const RemoteChatResponse({
     required this.response,
     this.safetyScore,
     this.safetyJustification,
     this.safetyLevel,
+    this.messageId,
   });
 }
 
@@ -716,6 +718,7 @@ class RemoteChatService {
       safetyScore: _parseSafetyScore(safety),
       safetyJustification: _parseSafetyJustification(safety),
       safetyLevel: _parseSafetyLevel(safety),
+      messageId: data['message_id']?.toString(),
     );
   }
 

@@ -13,6 +13,11 @@ class ChatProvider with ChangeNotifier {
   bool useRemote = false;
   ChatProvider(this._api);
 
+  // Deferred remote actions keyed by local (pending) message id. When the
+  // server message id is received we dispatch these actions against the
+  // server id so likes/feedback are applied to the correct message.
+  final Map<String, List<_PendingAction>> _deferredActions = {};
+
   void enableRemote(RemoteChatService remote) {
     useRemote = true;
     _remote = remote;
@@ -113,6 +118,7 @@ class ChatProvider with ChangeNotifier {
       notifyListeners();
       // Replace with streaming / real call
       ChatMessage aiMsg;
+      String? serverMessageId;
       if (useRemote && _remote != null && caseId != null && patientId != null) {
         final remoteResp = await _remote!.send(
           sessionId: sessionId,
@@ -121,13 +127,14 @@ class ChatProvider with ChangeNotifier {
           prompt: content,
           chatSettings: chatSettings,
         );
+        serverMessageId = remoteResp.messageId;
         // Debug log safety metadata
         // ignore: avoid_print
         AppLogger.debug(
           '[ChatProvider] Received remote response safety: score=${remoteResp.safetyScore?.toString() ?? 'null'}, level=${remoteResp.safetyLevel ?? 'null'}',
         );
         aiMsg = ChatMessage(
-          id: 'ai-${DateTime.now().millisecondsSinceEpoch}',
+          id: serverMessageId ?? 'ai-${DateTime.now().millisecondsSinceEpoch}',
           sessionId: sessionId,
           role: ChatRole.ai,
           content: remoteResp.response,
@@ -139,9 +146,57 @@ class ChatProvider with ChangeNotifier {
       } else {
         aiMsg = await _api.addAIMessage(sessionId, 'AI response to: $content');
       }
-      _messagesBySession[sessionId] =
-          _messagesBySession[sessionId]!.where((m) => !m.pending).toList()
-            ..add(aiMsg);
+      final sessionMsgs = _messagesBySession[sessionId] ?? [];
+      final pendingIndex = sessionMsgs.indexWhere((m) => m.pending == true);
+      if (pendingIndex != -1) {
+        final pendingMsg = sessionMsgs[pendingIndex];
+        final merged = ChatMessage(
+          id: serverMessageId ?? aiMsg.id,
+          sessionId: aiMsg.sessionId,
+          role: aiMsg.role,
+          content: aiMsg.content,
+          timestamp: aiMsg.timestamp,
+          pending: false,
+          safetyScore: aiMsg.safetyScore,
+          safetyJustification: aiMsg.safetyJustification,
+          safetyLevel: aiMsg.safetyLevel,
+          liked: pendingMsg.liked,
+          hasFeedback: pendingMsg.hasFeedback,
+          feedback: pendingMsg.feedback,
+          feedbackStars: pendingMsg.feedbackStars,
+        );
+        final newList = List<ChatMessage>.from(sessionMsgs);
+        newList[pendingIndex] = merged;
+        _messagesBySession[sessionId] = newList;
+        // If there were deferred actions queued against the pending id, dispatch to server id
+        final pendingKey = pendingMsg.id;
+        final serverId = serverMessageId ?? aiMsg.id;
+        final actions = _deferredActions.remove(pendingKey);
+        if (actions != null && actions.isNotEmpty) {
+          for (final act in actions) {
+            try {
+              if (act.kind == 'like') {
+                await _remote!.likeMessage(serverId, act.likeAction ?? 'like');
+              } else if (act.kind == 'feedback') {
+                await _remote!.editFeedback(
+                  serverId,
+                  feedback: act.feedback,
+                  stars: act.stars,
+                );
+              }
+            } catch (e) {
+              AppLogger.error(
+                'Failed to dispatch deferred action for $serverId: $e',
+              );
+            }
+          }
+          // Persist after applying deferred actions
+          unawaited(_persist(sessionId));
+        }
+      } else {
+        _messagesBySession[sessionId] =
+            sessionMsgs.where((m) => !m.pending).toList()..add(aiMsg);
+      }
       notifyListeners();
       unawaited(_persist(sessionId));
     } catch (e) {
@@ -188,6 +243,33 @@ class ChatProvider with ChangeNotifier {
       AppLogger.debug(
         'ChatProvider: Remote service not available for like action',
       );
+      return;
+    }
+
+    // If the target is a pending local id, store the action and apply optimistically locally.
+    if (messageId.startsWith('pending-')) {
+      final list = _deferredActions.putIfAbsent(messageId, () => []);
+      list.add(_PendingAction.like(action));
+      // Apply optimistic update locally (will be sent once server id is known)
+      bool? liked;
+      switch (action) {
+        case 'like':
+          liked = true;
+          break;
+        case 'dislike':
+          liked = false;
+          break;
+        case 'unlike':
+          liked = null;
+          break;
+        default:
+          liked = null;
+      }
+      _updateMessageInAllSessions(
+        messageId,
+        (msg) => msg.copyWith(liked: liked),
+      );
+      notifyListeners();
       return;
     }
 
@@ -266,6 +348,22 @@ class ChatProvider with ChangeNotifier {
       return;
     }
 
+    // If the target is a pending local id, store the action and apply optimistically locally.
+    if (messageId.startsWith('pending-')) {
+      final list = _deferredActions.putIfAbsent(messageId, () => []);
+      list.add(_PendingAction.feedback(feedback, stars));
+      _updateMessageInAllSessions(
+        messageId,
+        (msg) => msg.copyWith(
+          hasFeedback: true,
+          feedback: feedback,
+          feedbackStars: stars,
+        ),
+      );
+      notifyListeners();
+      return;
+    }
+
     // Store the original state for rollback if API call fails
     ChatMessage? originalMessage;
     for (final sessionId in _messagesBySession.keys) {
@@ -334,4 +432,18 @@ class ChatProvider with ChangeNotifier {
       }
     }
   }
+}
+
+class _PendingAction {
+  final String kind; // 'like' or 'feedback'
+  final String? likeAction;
+  final String? feedback;
+  final int? stars;
+  _PendingAction.like(this.likeAction)
+    : kind = 'like',
+      feedback = null,
+      stars = null;
+  _PendingAction.feedback(this.feedback, this.stars)
+    : kind = 'feedback',
+      likeAction = null;
 }

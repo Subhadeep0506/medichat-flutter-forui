@@ -81,6 +81,8 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+
     return FDialog(
       direction: Axis.horizontal,
       title: Row(
@@ -113,7 +115,11 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
                 const SizedBox(height: 4),
                 Text(
                   'Configure AI model parameters',
-                  style: Theme.of(context).textTheme.bodyMedium,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
                 ),
               ],
             ),
@@ -124,15 +130,16 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
           ),
         ],
       ),
-      body: SizedBox(
+      body: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: screenHeight * 0.6),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (!_hasProvider)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 12.0),
+                  padding: const EdgeInsets.only(bottom: 8.0),
                   child: FBadge(
                     style: FBadgeStyle.secondary(),
                     child: Row(
@@ -153,15 +160,15 @@ class _ChatSettingsDialogState extends State<ChatSettingsDialog> {
                   ),
                 ),
               _buildModelProviderSection(),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               _buildModelSelectSection(),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               _buildTemperatureSection(),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               _buildTopPSection(),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               _buildMaxTokensSection(),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               _buildDebugSection(),
             ],
           ),

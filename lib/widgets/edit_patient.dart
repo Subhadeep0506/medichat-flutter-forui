@@ -3,12 +3,12 @@ import '../models/patient.dart';
 import '../providers/patient_provider.dart';
 
 import 'package:forui/forui.dart';
-import '../widgets/ui/app_text_field.dart';
-import '../widgets/ui/app_button.dart';
-import '../widgets/ui/app_select.dart';
-import '../widgets/ui/app_date_field.dart';
+import 'ui/app_text_field.dart';
+import 'ui/app_button.dart';
+import 'ui/app_select.dart';
+import 'ui/app_date_field.dart';
 import '../utils/token_expiration_handler.dart';
-import '../widgets/app_loading_widget.dart';
+import 'app_loading_widget.dart';
 
 class EditPatientDialog extends StatefulWidget {
   final Patient patient;

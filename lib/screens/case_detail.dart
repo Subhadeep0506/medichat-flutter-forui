@@ -5,8 +5,8 @@ import 'package:provider/provider.dart';
 import 'package:forui/forui.dart';
 import '../providers/session_provider.dart';
 import '../providers/case_provider.dart';
-import '../widgets/styled_icon_button.dart';
 import '../utils/token_expiration_handler.dart';
+import '../widgets/ui/app_floating_action_button.dart';
 
 class CaseDetailScreen extends StatefulWidget {
   final String patientId;
@@ -238,7 +238,7 @@ class _CaseDetailScreenState extends State<CaseDetailScreen>
           Positioned(
             right: 16,
             bottom: WidgetsBinding.instance.window.viewInsets.bottom + 20,
-            child: StyledFloatingActionButton(
+            child: AppFloatingActionButton(
               icon: FIcons.messageSquarePlus,
               label: 'Start Chat',
               tooltip: 'Start New Chat Session',

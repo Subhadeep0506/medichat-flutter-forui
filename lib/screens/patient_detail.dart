@@ -1,4 +1,3 @@
-import 'package:MediChat/widgets/styled_icon_button.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -6,9 +5,10 @@ import 'package:forui/forui.dart';
 import '../providers/patient_provider.dart';
 import '../providers/case_provider.dart';
 import '../widgets/case_card.dart';
-import '../components/edit_case.dart';
+import '../widgets/edit_case.dart';
 import '../utils/token_expiration_handler.dart';
 import '../widgets/app_loading_widget.dart';
+import '../widgets/ui/app_floating_action_button.dart';
 
 class PatientDetailScreen extends StatefulWidget {
   final String patientId;
@@ -522,7 +522,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
           Positioned(
             right: 16,
             bottom: WidgetsBinding.instance.window.viewInsets.bottom + 20,
-            child: StyledFloatingActionButton(
+            child: AppFloatingActionButton(
               icon: FIcons.bookmarkPlus,
               label: 'Add Case',
               tooltip: 'Add New Medical Case',

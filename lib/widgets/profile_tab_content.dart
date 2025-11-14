@@ -530,7 +530,7 @@ class _SaveButtonState extends State<_SaveButton> {
     return AppButton(
       label: isLoading ? 'Saving...' : 'Save Changes',
       onPressed: isLoading ? null : _handleSave,
-      leading: isLoading ? const AppLoadingWidget.small() : null,
+      leading: isLoading ? const AppLoadingWidget.extraSmall() : null,
       isLoading: isLoading,
     );
   }

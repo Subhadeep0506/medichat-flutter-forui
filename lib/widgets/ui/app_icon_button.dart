@@ -7,6 +7,7 @@ class AppIconButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final double size;
   final EdgeInsetsGeometry padding;
+  final Color? color;
 
   const AppIconButton({
     super.key,
@@ -14,16 +15,15 @@ class AppIconButton extends StatelessWidget {
     this.onPressed,
     this.size = 20,
     this.padding = const EdgeInsets.all(8),
+    this.color,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Use FButton.icon for a Forui-styled icon-only button. Fall back to
-    // IconButton if FButton.icon is not suitable in a particular place.
     return FButton.icon(
       style: FButtonStyle.ghost(),
       onPress: onPressed,
-      child: Icon(icon, size: size),
+      child: Icon(icon, size: size, color: color),
     );
   }
 }

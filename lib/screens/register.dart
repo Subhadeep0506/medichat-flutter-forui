@@ -1,9 +1,9 @@
+import 'package:MediChat/widgets/ui/app_icon_button.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:forui/forui.dart';
-import '../widgets/styled_icon_button.dart';
 import '../widgets/ui/app_text_field.dart';
 import '../widgets/ui/app_button.dart';
 import 'package:provider/provider.dart';
@@ -179,10 +179,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            StyledIconButton(
+            AppIconButton(
               icon: FIcons.arrowLeft,
-              tooltip: 'Back to Onboarding',
-              margin: const EdgeInsets.all(8),
               onPressed: () => context.go('/onboard'),
             ),
             const SizedBox(width: 8),
@@ -241,7 +239,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   label: const Text('Password'),
                   prefixIcon: const Icon(FIcons.lock),
                   obscureText: _obscurePassword,
-                  suffixIcon: StyledIconButton(
+                  suffixIcon: AppIconButton(
                     padding: EdgeInsets.all(8),
                     icon: _obscurePassword ? FIcons.eye : FIcons.eyeClosed,
                     onPressed: () {
@@ -258,7 +256,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   label: const Text('Confirm password'),
                   prefixIcon: const Icon(FIcons.lock),
                   obscureText: _obscureConfirmPassword,
-                  suffixIcon: StyledIconButton(
+                  suffixIcon: AppIconButton(
                     padding: EdgeInsets.all(8),
                     icon: _obscurePassword ? FIcons.eye : FIcons.eyeClosed,
                     onPressed: () {

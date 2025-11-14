@@ -60,11 +60,11 @@ class PatientCaseDetailsPopover extends StatelessWidget {
       ),
       body: ConstrainedBox(
         constraints: BoxConstraints(
-          maxWidth: screenWidth > 800 ? 640 : screenWidth * 0.95,
-          maxHeight: screenHeight * 0.8,
+          maxWidth: screenWidth * 0.90,
+          maxHeight: screenHeight * 0.6,
         ),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -75,7 +75,7 @@ class PatientCaseDetailsPopover extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               _buildPatientInfo(context),
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
               _buildSectionHeader(context, 'Medical Case', FIcons.clipboard),
               const SizedBox(height: 8),
               _buildCaseInfo(context),
@@ -86,7 +86,7 @@ class PatientCaseDetailsPopover extends StatelessWidget {
       actions: [
         AppButton(
           label: 'Close',
-          style: FButtonStyle.ghost(),
+          style: FButtonStyle.secondary(),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ],
@@ -118,7 +118,7 @@ class PatientCaseDetailsPopover extends StatelessWidget {
 
   Widget _buildPatientInfo(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(6),
       decoration: _panelDecoration(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -176,7 +176,7 @@ class PatientCaseDetailsPopover extends StatelessWidget {
 
   Widget _buildCaseInfo(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(6),
       decoration: _panelDecoration(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -235,7 +235,7 @@ class PatientCaseDetailsPopover extends StatelessWidget {
     bool isMultiline = false,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -282,7 +282,7 @@ class PatientCaseDetailsPopover extends StatelessWidget {
     IconData icon2,
   ) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
           Expanded(
@@ -363,7 +363,7 @@ class PatientCaseDetailsPopover extends StatelessWidget {
 
   Widget _buildTagsRow(BuildContext context, String label, List<String> tags) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -401,7 +401,7 @@ class PatientCaseDetailsPopover extends StatelessWidget {
                               (tag) => Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 6,
-                                  vertical: 4,
+                                  vertical: 3,
                                 ),
                                 decoration: BoxDecoration(
                                   color: Theme.of(
@@ -504,7 +504,7 @@ class PatientCaseDetailsPopover extends StatelessWidget {
 
   Widget _buildDialogIcon(BuildContext context, IconData icon, {Color? color}) {
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: (color ?? Theme.of(context).colorScheme.primary).withValues(
           alpha: 0.12,

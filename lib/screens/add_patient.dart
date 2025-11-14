@@ -1,4 +1,3 @@
-import 'package:MediChat/widgets/styled_icon_button.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -117,10 +116,8 @@ class _AddPatientScreenState extends State<AddPatientScreen>
         ),
         title: Center(child: Text('Add New Patient')),
         suffixes: [
-          StyledIconButton(
+          AppIconButton(
             icon: FIcons.x,
-            tooltip: 'Cancel',
-            margin: const EdgeInsets.all(8),
             onPressed: _cancelForm,
           ),
         ],

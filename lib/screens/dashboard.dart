@@ -1,4 +1,3 @@
-import 'package:MediChat/widgets/styled_icon_button.dart';
 import 'package:MediChat/widgets/ui/ui_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -7,11 +6,12 @@ import 'package:forui/forui.dart';
 import '../services/toast_service.dart';
 import '../providers/patient_provider.dart';
 import '../widgets/patient_card.dart';
-import '../components/edit_patient.dart';
+import '../widgets/edit_patient.dart';
 import '../widgets/profile_tab_content.dart';
 import '../utils/token_expiration_handler.dart';
 import '../widgets/app_loading_widget.dart';
 import '../utils/app_logger.dart';
+import '../widgets/ui/app_floating_action_button.dart';
 import 'settings.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -731,7 +731,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             Positioned(
               right: 16,
               bottom: WidgetsBinding.instance.window.viewInsets.bottom + 20,
-              child: StyledFloatingActionButton(
+              child: AppFloatingActionButton(
                 icon: FIcons.userPlus,
                 onPressed: () => context.push('/add-patient'),
                 tooltip: 'Add New Patient',

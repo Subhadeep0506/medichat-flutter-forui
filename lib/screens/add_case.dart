@@ -5,10 +5,10 @@ import 'package:uuid/uuid.dart';
 import 'package:forui/forui.dart';
 import '../providers/case_provider.dart';
 import '../utils/token_expiration_handler.dart';
+import '../widgets/ui/app_icon_button.dart';
 import '../widgets/ui/app_text_field.dart';
 import '../widgets/ui/app_button.dart';
 import '../widgets/ui/app_select.dart';
-import '../widgets/styled_icon_button.dart';
 
 class AddCaseScreen extends StatefulWidget {
   final String patientId;
@@ -93,10 +93,8 @@ class _AddCaseScreenState extends State<AddCaseScreen>
           ),
         ),
         suffixes: [
-          StyledIconButton(
+          AppIconButton(
             icon: FIcons.x,
-            tooltip: 'Cancel',
-            margin: const EdgeInsets.all(8),
             onPressed: _cancelForm,
           ),
         ],

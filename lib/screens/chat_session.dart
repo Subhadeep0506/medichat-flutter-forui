@@ -1,6 +1,5 @@
 // ChatSessionScreen – clean single implementation with safety badge & session management.
 import 'package:MediChat/widgets/custom_text_field.dart';
-import 'package:MediChat/widgets/styled_icon_button.dart';
 import 'package:MediChat/widgets/ui/ui_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -299,10 +298,9 @@ class _ChatSessionScreenState extends State<ChatSessionScreen>
           ),
           title: Row(
             children: [
-              StyledIconButton(
+              AppIconButton(
                 icon: FIcons.arrowLeft,
                 onPressed: () => context.go('/patients/${widget.patientId}'),
-                tooltip: 'Back to Patient',
               ),
               const SizedBox(width: 8),
               Container(
@@ -462,23 +460,23 @@ class _ChatSessionScreenState extends State<ChatSessionScreen>
                         width: 1,
                       ),
                     ),
-                    boxShadow: _sidebarVisible
-                        ? [
-                            BoxShadow(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.shadow.withValues(alpha: 0.1),
-                              blurRadius: 20,
-                              offset: const Offset(4, 0),
-                              spreadRadius: 2,
-                            ),
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.08),
-                              blurRadius: 12,
-                              offset: const Offset(2, 0),
-                            ),
-                          ]
-                        : null,
+                    // boxShadow: _sidebarVisible
+                    //     ? [
+                    //         BoxShadow(
+                    //           color: Theme.of(
+                    //             context,
+                    //           ).colorScheme.shadow.withValues(alpha: 0.1),
+                    //           blurRadius: 20,
+                    //           offset: const Offset(4, 0),
+                    //           spreadRadius: 2,
+                    //         ),
+                    //         BoxShadow(
+                    //           color: Colors.black.withValues(alpha: 0.08),
+                    //           blurRadius: 12,
+                    //           offset: const Offset(2, 0),
+                    //         ),
+                    //       ]
+                    //     : null,
                   ),
                   child: _SessionsSidebar(
                     caseId: widget.caseId,
@@ -836,7 +834,7 @@ class _AIMessageBubbleState extends State<_AIMessageBubble> {
                     ? Row(
                         mainAxisSize: MainAxisSize.min,
                         children: const [
-                          SizedBox(child: AppLoadingWidget.small()),
+                          SizedBox(child: AppLoadingWidget.extraSmall()),
                           SizedBox(width: 8),
                           Text('Thinking...'),
                         ],
@@ -896,7 +894,7 @@ class _AIMessageBubbleState extends State<_AIMessageBubble> {
                           final theme = Theme.of(context);
                           final maxHeight =
                               MediaQuery.of(context).size.height * 0.7;
-                          // Unified styling using FDialog similar to PatientCaseDetailsPopover
+
                           return ConstrainedBox(
                             constraints: BoxConstraints(maxHeight: maxHeight),
                             child: FDialog(
@@ -1047,7 +1045,7 @@ class _AIMessageBubbleState extends State<_AIMessageBubble> {
                                               ],
                                             ),
                                             if (safetyJust != null) ...[
-                                              const SizedBox(height: 16),
+                                              const SizedBox(height: 8),
                                               Container(
                                                 padding: const EdgeInsets.all(
                                                   8,
@@ -1080,7 +1078,16 @@ class _AIMessageBubbleState extends State<_AIMessageBubble> {
                                                       safetyJust,
                                                       style: theme
                                                           .textTheme
-                                                          .bodySmall,
+                                                          .bodySmall
+                                                          ?.copyWith(
+                                                            color: theme
+                                                                .colorScheme
+                                                                .onSurface
+                                                                .withValues(
+                                                                  alpha: 0.7,
+                                                                ),
+                                                            height: 1.4,
+                                                          ),
                                                     ),
                                                   ],
                                                 ),
@@ -1148,7 +1155,7 @@ class _AIMessageBubbleState extends State<_AIMessageBubble> {
                                                     'This response is AI-generated and should not replace professional medical advice. Always verify information with qualified healthcare providers and official medical sources before making any medical decisions.',
                                                     style: theme
                                                         .textTheme
-                                                        .bodySmall
+                                                        .labelSmall
                                                         ?.copyWith(
                                                           color: theme
                                                               .colorScheme
@@ -1156,7 +1163,7 @@ class _AIMessageBubbleState extends State<_AIMessageBubble> {
                                                               .withValues(
                                                                 alpha: 0.7,
                                                               ),
-                                                          height: 1.4,
+                                                          height: 1.2,
                                                         ),
                                                   ),
                                                 ],
@@ -1311,7 +1318,7 @@ class _ThinkSection extends StatelessWidget {
   }
 }
 
-class _SessionsSidebar extends StatelessWidget {
+class _SessionsSidebar extends StatefulWidget {
   final String caseId;
   final String patientId;
   final String activeSessionId;
@@ -1322,6 +1329,17 @@ class _SessionsSidebar extends StatelessWidget {
     required this.activeSessionId,
     required this.onOpen,
   });
+
+  @override
+  State<_SessionsSidebar> createState() => _SessionsSidebarState();
+}
+
+class _SessionsSidebarState extends State<_SessionsSidebar>
+    with TokenExpirationHandler {
+  String get caseId => widget.caseId;
+  String get patientId => widget.patientId;
+  String get activeSessionId => widget.activeSessionId;
+  ValueChanged<ChatSession> get onOpen => widget.onOpen;
 
   String _formatDate(DateTime date) {
     final now = DateTime.now();
@@ -1343,8 +1361,8 @@ class _SessionsSidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final prov = context.watch<SessionProvider>();
-    final sessions = prov.sessionsFor(caseId);
-    final loading = prov.isLoading(caseId);
+    final sessions = prov.sessionsFor(widget.caseId);
+    final loading = prov.isLoading(widget.caseId);
     return Container(
       color: Theme.of(context).colorScheme.surface,
       child: Column(
@@ -1353,23 +1371,23 @@ class _SessionsSidebar extends StatelessWidget {
             padding: const EdgeInsets.all(12.0),
             child: FButton(
               style: FButtonStyle.outline(),
-              prefix: prov.isCreating(caseId)
-                  ? const AppLoadingWidget.small()
+              prefix: prov.isCreating(widget.caseId)
+                  ? const AppLoadingWidget.extraSmall()
                   : Icon(FIcons.circlePlus, size: 18),
-              onPress: prov.isCreating(caseId)
+              onPress: prov.isCreating(widget.caseId)
                   ? null
                   : () async {
                       final newSession = await context
                           .read<SessionProvider>()
                           .create(
-                            caseId,
-                            patientId: patientId,
+                            widget.caseId,
+                            patientId: widget.patientId,
                             title: 'Session',
                           );
-                      if (newSession != null) onOpen(newSession);
+                      if (newSession != null) widget.onOpen(newSession);
                     },
               child: Text(
-                prov.isCreating(caseId)
+                prov.isCreating(widget.caseId)
                     ? 'Creating Session...'
                     : 'Start New Session',
               ),
@@ -1416,7 +1434,8 @@ class _SessionsSidebar extends StatelessWidget {
                 ),
                 FButton.icon(
                   style: FButtonStyle.ghost(),
-                  onPress: () => prov.refresh(caseId, patientId: patientId),
+                  onPress: () =>
+                      prov.refresh(widget.caseId, patientId: widget.patientId),
                   child: Icon(FIcons.refreshCw, size: 18),
                 ),
               ],
@@ -1458,13 +1477,16 @@ class _SessionsSidebar extends StatelessWidget {
                   return _SessionTile(
                     session: s,
                     selected: selected,
-                    onOpen: () => onOpen(s),
+                    onOpen: () => widget.onOpen(s),
                     onRename: (newTitle) async {
-                      final ok = await context.read<SessionProvider>().rename(
-                        s.id,
-                        caseId,
-                        newTitle,
-                      );
+                      bool ok = false;
+                      await handleTokenExpiration(() async {
+                        ok = await context.read<SessionProvider>().rename(
+                          s.id,
+                          widget.caseId,
+                          newTitle,
+                        );
+                      });
                       if (context.mounted) {
                         if (ok) {
                           ToastService.showSuccess(
@@ -1480,19 +1502,23 @@ class _SessionsSidebar extends StatelessWidget {
                       }
                     },
                     onDelete: () async {
-                      final ok = await context.read<SessionProvider>().remove(
-                        s.id,
-                        caseId,
-                      );
+                      bool ok = false;
+                      await handleTokenExpiration(() async {
+                        ok = await context.read<SessionProvider>().remove(
+                          s.id,
+                          widget.caseId,
+                        );
+                      });
                       if (context.mounted) {
                         if (ok) {
                           ToastService.showSuccess(
                             'Session deleted',
                             context: context,
                           );
-                          if (s.id == activeSessionId) {
-                            final remaining = prov.sessionsFor(caseId);
-                            if (remaining.isNotEmpty) onOpen(remaining.last);
+                          if (s.id == widget.activeSessionId) {
+                            final remaining = prov.sessionsFor(widget.caseId);
+                            if (remaining.isNotEmpty)
+                              widget.onOpen(remaining.last);
                           }
                         } else {
                           ToastService.showError(
@@ -1520,10 +1546,10 @@ class _SessionsSidebar extends StatelessWidget {
           Flexible(
             flex: 0,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+              padding: const EdgeInsets.fromLTRB(0, 0, 0, 0),
               child: PatientCaseInfoSection(
-                patientId: patientId,
-                caseId: caseId,
+                patientId: widget.patientId,
+                caseId: widget.caseId,
               ),
             ),
           ),
@@ -1538,8 +1564,8 @@ class _SessionTile extends StatefulWidget {
   final ChatSession session;
   final bool selected;
   final VoidCallback onOpen;
-  final ValueChanged<String> onRename;
-  final VoidCallback onDelete;
+  final Future<void> Function(String) onRename;
+  final Future<void> Function() onDelete;
   final String createdLabel;
   const _SessionTile({
     required this.session,
@@ -1566,113 +1592,31 @@ class _SessionTileState extends State<_SessionTile>
 
   Future<void> _handleRename() async {
     _controller.hide();
-    final newTitle = await showFDialog<String>(
+    await showFDialog<void>(
       context: context,
       builder: (ctx, style, animation) {
-        final ctrl = TextEditingController(text: widget.session.title);
-        final ftheme = FTheme.of(ctx);
-        final maxHeight = MediaQuery.of(context).size.height * 0.7;
-        return ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: maxHeight),
-          child: FDialog(
-            style: style.call,
-            animation: animation,
-            direction: Axis.horizontal,
-            title: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: ftheme.colors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    FIcons.pencil,
-                    color: ftheme.colors.primary,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Rename Session',
-                    style: ftheme.typography.lg.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: ftheme.colors.foreground,
-                    ),
-                  ),
-                ),
-                FButton.icon(
-                  style: FButtonStyle.ghost(),
-                  onPress: () => Navigator.pop(ctx),
-                  child: const Icon(FIcons.x),
-                ),
-              ],
-            ),
-            body: Padding(
-              padding: const EdgeInsets.only(top: 12.0),
-              child: CustomTextField(
-                controller: ctrl,
-                hintText: 'Session Title',
-                icon: Icon(FIcons.pencil, color: ftheme.colors.primary),
-              ),
-            ),
-
-            actions: [
-              FButton(
-                style: FButtonStyle.outline(),
-                onPress: () => Navigator.pop(ctx),
-                child: const Text('Cancel'),
-              ),
-              FButton(
-                onPress: () => Navigator.pop(ctx, ctrl.text.trim()),
-                child: const Text('Save'),
-              ),
-            ],
-          ),
+        return _RenameDialog(
+          session: widget.session,
+          style: style,
+          animation: animation,
+          onRename: widget.onRename,
         );
       },
     );
-    if (newTitle != null && newTitle.isNotEmpty) {
-      widget.onRename(newTitle);
-    }
   }
 
   Future<void> _handleDelete() async {
     _controller.hide();
-    final confirmed = await showFDialog<bool>(
+    await showFDialog<void>(
       context: context,
       builder: (ctx, style, animation) {
-        final maxHeight = MediaQuery.of(context).size.height * 0.7;
-        return ConstrainedBox(
-          constraints: BoxConstraints(maxHeight: maxHeight),
-          child: FDialog(
-            style: style.call,
-            animation: animation,
-            title: const Text('Delete Session'),
-            body: const Text(
-              'Are you sure you want to delete this session? This cannot be undone.',
-            ),
-            actions: [
-              FButton(
-                style: FButtonStyle.destructive(),
-                onPress: () => Navigator.of(ctx).pop(true),
-                child: const Text('Delete'),
-              ),
-              FButton(
-                style: FButtonStyle.outline(),
-                onPress: () => Navigator.of(ctx).pop(false),
-                child: const Text('Cancel'),
-              ),
-            ],
-          ),
+        return _DeleteDialog(
+          style: style,
+          animation: animation,
+          onDelete: widget.onDelete,
         );
       },
     );
-
-    if (confirmed == true) {
-      widget.onDelete();
-    }
   }
 
   @override
@@ -1682,49 +1626,33 @@ class _SessionTileState extends State<_SessionTile>
     final session = widget.session;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Container(
-        decoration: BoxDecoration(
-          color: selected
-              ? scheme.primaryContainer
-              : scheme.surfaceContainerHighest,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: selected
-                ? scheme.primary.withValues(alpha: 0.35)
-                : scheme.outline.withValues(alpha: 0.08),
-            width: 1,
-          ),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(8),
-            onTap: widget.onOpen,
+          onTap: widget.onOpen,
+          child: Container(
+            decoration: BoxDecoration(
+              color: selected
+                  ? scheme.primaryContainer
+                  : scheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: selected
+                    ? scheme.primary.withValues(alpha: 0.35)
+                    : scheme.outline.withValues(alpha: 0.08),
+                width: 1,
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             child: Row(
               children: [
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: selected
-                        ? scheme.primary.withValues(alpha: 0.12)
-                        : scheme.surface,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: selected
-                          ? scheme.primary.withValues(alpha: 0.25)
-                          : scheme.outline.withValues(alpha: 0.1),
-                    ),
-                  ),
-                  child: Icon(
-                    FIcons.messageSquareX,
-                    size: 16,
-                    color: selected
-                        ? scheme.secondary
-                        : scheme.onSurfaceVariant,
-                  ),
+                Icon(
+                  FIcons.messageSquareX,
+                  size: 16,
+                  color: selected ? scheme.secondary : scheme.onSurfaceVariant,
                 ),
+
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -1742,6 +1670,7 @@ class _SessionTileState extends State<_SessionTile>
                           color: selected ? scheme.secondary : scheme.onSurface,
                         ),
                       ),
+                      SizedBox(height: 4),
                       Text(
                         widget.createdLabel,
                         style: TextStyle(
@@ -1787,11 +1716,13 @@ class _SessionTileState extends State<_SessionTile>
                       ),
                     ),
                   ),
-                  builder: (context, controller, child) => StyledIconButton(
+                  builder: (context, controller, child) => AppIconButton(
                     icon: FIcons.ellipsis,
                     onPressed: () => controller.toggle(),
                     padding: const EdgeInsets.all(0),
-                    borderRadius: 6,
+                    color: selected
+                        ? Theme.of(context).colorScheme.secondary
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -2052,6 +1983,189 @@ class _ActionButton extends StatelessWidget {
                   ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Rename dialog with loading state
+class _RenameDialog extends StatefulWidget {
+  final ChatSession session;
+  final FDialogStyle Function(FDialogStyle style) style;
+  final Animation<double> animation;
+  final Future<void> Function(String newTitle) onRename;
+
+  const _RenameDialog({
+    required this.session,
+    required this.style,
+    required this.animation,
+    required this.onRename,
+  });
+
+  @override
+  State<_RenameDialog> createState() => _RenameDialogState();
+}
+
+class _RenameDialogState extends State<_RenameDialog> {
+  late final TextEditingController _controller;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.session.title);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleSave() async {
+    final newTitle = _controller.text.trim();
+    if (newTitle.isEmpty) return;
+
+    setState(() => _isLoading = true);
+    try {
+      await widget.onRename(newTitle);
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ftheme = FTheme.of(context);
+    final maxHeight = MediaQuery.of(context).size.height * 0.7;
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: maxHeight),
+      child: FDialog(
+        style: widget.style,
+        animation: widget.animation,
+        direction: Axis.horizontal,
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: ftheme.colors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                FIcons.pencil,
+                color: ftheme.colors.primary,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Rename Session',
+                style: ftheme.typography.lg.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: ftheme.colors.foreground,
+                ),
+              ),
+            ),
+            FButton.icon(
+              style: FButtonStyle.ghost(),
+              onPress: _isLoading ? null : () => Navigator.pop(context),
+              child: const Icon(FIcons.x),
+            ),
+          ],
+        ),
+        body: Padding(
+          padding: const EdgeInsets.only(top: 12.0),
+          child: CustomTextField(
+            controller: _controller,
+            hintText: 'Session Title',
+            icon: Icon(FIcons.pencil, color: ftheme.colors.primary),
+          ),
+        ),
+        actions: [
+          FButton(
+            style: FButtonStyle.outline(),
+            onPress: _isLoading ? null : () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FButton(
+            onPress: _isLoading ? null : _handleSave,
+            prefix: _isLoading ? const AppLoadingWidget.extraSmall() : null,
+            child: Text(_isLoading ? 'Saving...' : 'Save'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Delete dialog with loading state
+class _DeleteDialog extends StatefulWidget {
+  final FDialogStyle Function(FDialogStyle style) style;
+  final Animation<double> animation;
+  final Future<void> Function() onDelete;
+
+  const _DeleteDialog({
+    required this.style,
+    required this.animation,
+    required this.onDelete,
+  });
+
+  @override
+  State<_DeleteDialog> createState() => _DeleteDialogState();
+}
+
+class _DeleteDialogState extends State<_DeleteDialog> {
+  bool _isLoading = false;
+
+  Future<void> _handleDelete() async {
+    setState(() => _isLoading = true);
+    try {
+      await widget.onDelete();
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final maxHeight = MediaQuery.of(context).size.height * 0.7;
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: maxHeight),
+      child: FDialog(
+        direction: Axis.horizontal,
+        style: widget.style,
+        animation: widget.animation,
+        title: const Text('Delete Session'),
+        body: const Text(
+          'Are you sure you want to delete this session? This cannot be undone.',
+        ),
+        actions: [
+          FButton(
+            style: FButtonStyle.outline(),
+            onPress: _isLoading ? null : () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FButton(
+            style: FButtonStyle.destructive(),
+            onPress: _isLoading ? null : _handleDelete,
+            prefix: _isLoading ? const AppLoadingWidget.extraSmall() : null,
+            child: Text(_isLoading ? 'Deleting...' : 'Delete'),
+          ),
+        ],
       ),
     );
   }

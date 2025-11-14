@@ -1,3 +1,4 @@
+import 'package:MediChat/widgets/ui/ui_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -5,7 +6,6 @@ import 'package:forui/forui.dart';
 import '../providers/loading_animation_provider.dart';
 import '../utils/loading_animation_style.dart';
 import '../widgets/app_loading_widget.dart';
-import '../widgets/styled_icon_button.dart';
 
 class LoadingAnimationSettingsScreen extends StatefulWidget {
   const LoadingAnimationSettingsScreen({super.key});
@@ -30,10 +30,8 @@ class _LoadingAnimationSettingsScreenState
         ),
         title: Row(
           children: [
-            StyledIconButton(
+            AppIconButton(
               icon: FIcons.arrowLeft,
-              tooltip: 'Back',
-              margin: const EdgeInsets.all(8),
               onPressed: () => Navigator.of(context).pop(),
             ),
             const SizedBox(width: 8),
@@ -120,8 +118,12 @@ class _LoadingAnimationSettingsScreenState
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                    theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.1),
+                    theme.colorScheme.surfaceContainerHighest.withValues(
+                      alpha: 0.3,
+                    ),
+                    theme.colorScheme.surfaceContainerHighest.withValues(
+                      alpha: 0.1,
+                    ),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(16),
@@ -333,7 +335,9 @@ class _LoadingAnimationSettingsScreenState
                 : null,
             color: isSelected
                 ? null
-                : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                : theme.colorScheme.surfaceContainerHighest.withValues(
+                    alpha: 0.3,
+                  ),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isSelected

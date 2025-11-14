@@ -5,9 +5,9 @@ import '../models/case.dart';
 import '../providers/case_provider.dart';
 import '../services/toast_service.dart';
 import '../utils/token_expiration_handler.dart';
-import '../widgets/ui/app_text_field.dart';
-import '../widgets/ui/app_button.dart';
-import '../widgets/ui/app_select.dart';
+import 'ui/app_text_field.dart';
+import 'ui/app_button.dart';
+import 'ui/app_select.dart';
 import '../utils/app_logger.dart';
 
 class EditCaseDialog extends StatefulWidget {

@@ -27,6 +27,13 @@ class AppLoadingWidget extends StatelessWidget {
     this.backgroundColor,
   });
 
+  const AppLoadingWidget.extraSmall({
+    super.key,
+    this.color,
+    this.showBackground = false,
+    this.backgroundColor,
+  }) : size = 10;
+
   /// Creates a small loading widget (24px)
   const AppLoadingWidget.small({
     super.key,

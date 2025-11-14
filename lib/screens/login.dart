@@ -1,3 +1,4 @@
+import 'package:MediChat/widgets/ui/app_icon_button.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
@@ -10,7 +11,6 @@ import '../providers/case_provider.dart';
 import '../providers/session_provider.dart';
 import '../providers/chat_provider.dart';
 import '../providers/user_provider.dart';
-import '../widgets/styled_icon_button.dart';
 import '../widgets/ui/app_text_field.dart';
 import '../widgets/ui/app_button.dart';
 import '../services/remote_api_service.dart';
@@ -204,10 +204,8 @@ class _LoginScreenState extends State<LoginScreen> {
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            StyledIconButton(
+            AppIconButton(
               icon: FIcons.arrowLeft,
-              tooltip: 'Back to Onboarding',
-              margin: const EdgeInsets.all(8),
               onPressed: () => context.go('/onboard'),
             ),
             const SizedBox(width: 8),
@@ -259,7 +257,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   label: const Text('Password'),
                   obscureText: _obscurePassword,
                   prefixIcon: const Icon(FIcons.lock),
-                  suffixIcon: StyledIconButton(
+                  suffixIcon: AppIconButton(
                     padding: EdgeInsets.all(8),
                     icon: _obscurePassword ? FIcons.eye : FIcons.eyeClosed,
                     onPressed: () {
